@@ -1,5 +1,5 @@
 {
-  "name": "openclaw-setup",
+  "name": "clawchef",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -22,7 +22,7 @@
     "vite": "^8.0.0-beta.13"
   },
   "build": {
-    "appId": "com.openclaw.setup",
+    "appId": "com.clawchef.app",
     "mac": {
       "target": [
         "dmg"
