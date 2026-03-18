@@ -220,6 +220,11 @@ select.input-field option {
   border-bottom: 2px solid transparent;
   transition: var(--transition);
   position: relative;
+  cursor: pointer;
+}
+
+.step-item:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .step-item.active {

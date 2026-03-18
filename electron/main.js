@@ -17,15 +17,16 @@ async function ensurePath() {
             const pathLine = envVars.find(line => line.startsWith('PATH='));
             if (pathLine) {
                 const userPath = pathLine.replace('PATH=', '').trim();
-                if (userPath) {
-                    process.env.PATH = userPath;
-                }
             }
         } catch (error) {
             console.error('Could not fix PATH:', error);
         }
     }
 }
+
+// Synchronously inject standard Homebrew / global node bin paths immediately
+process.env.PATH = `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || ''}`;
+
 // Execute it early but don't block window creation immediately
 ensurePath();
 
@@ -84,6 +85,11 @@ app.on('activate', () => {
 // Helper for commands where we want to wait, but stream the logs live
 function runCommandStreaming(cmd, args, cwd) {
     return new Promise((resolve, reject) => {
+        if (cmd === 'openclaw') {
+            args = ['/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs', ...args];
+            cmd = '/opt/homebrew/bin/node';
+        }
+        
         sendLog(`> [EXEC] ${cmd} ${args.join(' ')}`);
         
         const child = spawn(cmd, args, { cwd, shell: true });
@@ -213,6 +219,10 @@ ipcMain.handle('setup-workspace', async (event, workspacePathInput) => {
     try {
         sendLog(`> [EXEC] openclaw onboard --workspace "${workspacePath}" --non-interactive --accept-risk`);
         await runCommandStreaming('openclaw', ['onboard', '--workspace', workspacePath, '--non-interactive', '--accept-risk', '--skip-daemon', '--skip-channels', '--skip-search', '--skip-skills', '--skip-ui', '--skip-health'], app.getPath('home'));
+        
+        sendLog(`> [EXEC] openclaw config set gateway.bind lan (cwd: ${workspacePath})`);
+        await runCommandStreaming('openclaw', ['config', 'set', 'gateway.bind', 'lan'], workspacePath);
+        
         sendLog('> [SYSTEM] Workspace setup complete.');
     } catch (e) {
         sendLog(`> [SYSTEM] [ERROR] Setup failed: ${e.message}`);
@@ -263,18 +273,65 @@ ipcMain.handle('save-channels', async (event, config) => {
     
     if (config.channels && Array.isArray(config.channels)) {
         for (const item of config.channels) {
+            let provider = item.provider.toLowerCase();
+            
+            if (provider.includes('lark')) {
+                const pName = 'feishu';
+                try {
+                    try {
+                        sendLog(`> [EXEC] openclaw plugins install @openclaw/feishu`);
+                        await runCommandStreaming('openclaw', ['plugins', 'install', '@openclaw/feishu'], app.getPath('home'));
+                    } catch (installErr) {
+                        sendLog(`> [SYSTEM] Feishu plugin already installed or failed to install: ${installErr.message}`);
+                        // Continue even if installation fails (it might already exist)
+                    }
+                    
+                    const workspacePath = config.workspacePath.replace('~', app.getPath('home'));
+                    sendLog(`> [EXEC] openclaw config set channels.${pName}.enabled true`);
+                    await runCommandStreaming('openclaw', ['config', 'set', `channels.${pName}.enabled`, 'true'], workspacePath);
+                    
+                    sendLog(`> [SYSTEM] Bypassing CLI to write Feishu credentials directly to openclaw.json...`);
+                    const cfgPath = path.join(workspacePath, 'openclaw.json');
+                    try {
+                        await fs.access(cfgPath);
+                        const rawCfg = await fs.readFile(cfgPath, 'utf8');
+                        const cfgObj = JSON.parse(rawCfg);
+                        
+                        if (!cfgObj.channels) cfgObj.channels = {};
+                        if (!cfgObj.channels[pName]) cfgObj.channels[pName] = { enabled: true };
+                        if (!cfgObj.channels[pName].accounts) cfgObj.channels[pName].accounts = {};
+                        if (!cfgObj.channels[pName].accounts[pName]) cfgObj.channels[pName].accounts[pName] = { enabled: true };
+                        
+                        if (item.appId) cfgObj.channels[pName].accounts[pName].appId = item.appId.trim();
+                        if (item.appSecret) cfgObj.channels[pName].accounts[pName].appSecret = item.appSecret.trim();
+                        if (item.encryptKey) cfgObj.channels[pName].accounts[pName].encryptKey = item.encryptKey.trim();
+                        if (item.verificationToken) cfgObj.channels[pName].accounts[pName].verificationToken = item.verificationToken.trim();
+                        if (item.domain) cfgObj.channels[pName].accounts[pName].domain = item.domain.trim();
+                        if (item.dmPolicy) cfgObj.channels[pName].accounts[pName].dmPolicy = item.dmPolicy.trim();
+                        
+                        await fs.writeFile(cfgPath, JSON.stringify(cfgObj, null, 2));
+                        sendLog(`> [SYSTEM] Feishu credentials written directly to openclaw.json.`);
+                    } catch (err) {
+                        sendLog(`> [SYSTEM] openclaw.json not found or unreadable: ${err.message}`);
+                    }
+                } catch (e) {
+                    sendLog(`> [SYSTEM] [ERROR] Failed to add Lark channel: ${e.message}`);
+                }
+                continue;
+            }
+            
             if (item.key && item.key.trim() !== '') {
-                let provider = item.provider.toLowerCase();
                 let tokenArg = provider === 'slack' ? '--bot-token' : '--token';
                 if (provider === 'webhook' || provider === 'whatsapp') continue;
                 
                 let args = ['channels', 'add', '--channel', provider, tokenArg, item.key.trim()];
                 try {
+                    const workspacePath = config.workspacePath.replace('~', app.getPath('home'));
                     sendLog(`> [EXEC] openclaw config set channels.${provider}.enabled true`);
-                    await runCommandStreaming('openclaw', ['config', 'set', `channels.${provider}.enabled`, 'true'], app.getPath('home'));
+                    await runCommandStreaming('openclaw', ['config', 'set', `channels.${provider}.enabled`, 'true'], workspacePath);
                     
                     sendLog(`> [EXEC] openclaw ${args.join(' ')}`);
-                    await runCommandStreaming('openclaw', args, app.getPath('home'));
+                    await runCommandStreaming('openclaw', args, workspacePath);
                 } catch (e) {
                     sendLog(`> [SYSTEM] [ERROR] Failed to add channel ${provider}: ${e.message}`);
                 }
@@ -306,21 +363,62 @@ ipcMain.handle('generate-whatsapp-qr', async (event, workspacePathInput) => {
     }
 });
 
-ipcMain.handle('test-message', async (event, workspacePathInput, phone, msg) => {
-    sendLog(`> [SYSTEM] Initiating Test Message dispatch to ${phone}...`);
+ipcMain.handle('test-message', async (event, workspacePathInput, channel, phone, msg) => {
+    sendLog(`> [SYSTEM] Initiating Test Message dispatch to ${phone} via ${channel}...`);
     try {
         const workspacePath = workspacePathInput.replace('~', app.getPath('home'));
-        const repoPath = path.join(workspacePath, 'openclaw');
+        const repoPath = workspacePath;
         
-        sendLog(`> [EXEC] openclaw message send -t "${phone}" --message "${msg}" (cwd: ${repoPath})`);
+        let targetId = phone;
+        if (channel === 'telegram' && targetId.startsWith('@')) {
+            const possibleNumeric = targetId.substring(1);
+            if (/^\d+$/.test(possibleNumeric)) {
+                targetId = possibleNumeric;
+            }
+        } else if (channel === 'feishu' || channel === 'lark') {
+            channel = 'feishu'; // Ensure we use 'feishu' for the CLI command
+            if (targetId.startsWith('@')) {
+                // Feishu expects user:openId or chat:chatId. We'll default to user for testing.
+                targetId = 'user:' + targetId.substring(1);
+            } else if (!targetId.includes(':')) {
+                // If it's just a raw string like "taijin", make it "user:taijin" to avoid the Unknown target error.
+                targetId = 'user:' + targetId;
+            }
+        }
+        
+        let cmdArgs = ['message', 'send', '--channel', channel, '-t', targetId, '-m', msg];
+        if (channel === 'feishu') {
+            cmdArgs = ['message', 'send', '--channel', channel, '--account', 'feishu', '-t', targetId, '-m', msg];
+        }
+        
+        sendLog(`> [EXEC] openclaw ${cmdArgs.join(' ')} (cwd: ${repoPath})`);
         
         // Ensure we execute from inside the cloned repository to prevent ENOTDIR from ASAR roots.
-        await runCommandStreaming('openclaw', ['message', 'send', '-t', `"${phone}"`, '--message', `"${msg}"`], repoPath);
+        await runCommandStreaming('openclaw', cmdArgs, repoPath);
         
         sendLog('> [SYSTEM] Test Message dispatched successfully.');
         return { success: true };
     } catch (error) {
         sendLog(`> [SYSTEM] [ERROR] Message dispatch failed: ${error.message}`);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('approve-pairing', async (event, config) => {
+    sendLog(`> [SYSTEM] Initiating Pairing Approval for ${config.channel} with code ${config.code}...`);
+    try {
+        const workspacePath = config.workspacePath.replace('~', app.getPath('home'));
+        const repoPath = workspacePath;
+        
+        let cmdArgs = ['pairing', 'approve', config.channel, config.code];
+        sendLog(`> [EXEC] openclaw ${cmdArgs.join(' ')} (cwd: ${repoPath})`);
+        
+        await runCommandStreaming('openclaw', cmdArgs, repoPath);
+        
+        sendLog('> [SYSTEM] Pairing approved successfully.');
+        return { success: true };
+    } catch (error) {
+        sendLog(`> [SYSTEM] [ERROR] Pairing approval failed: ${error.message}`);
         return { success: false, error: error.message };
     }
 });
@@ -346,7 +444,7 @@ ipcMain.handle('start-claw', async (event, config) => {
 
         sendLog('> [SYSTEM] Fetching Manager Dashboard URL...');
         try {
-            const { stdout } = await execAsync('openclaw dashboard --no-open', { cwd: app.getPath('home') });
+            const { stdout } = await execAsync('/opt/homebrew/bin/node /opt/homebrew/lib/node_modules/openclaw/openclaw.mjs dashboard --no-open', { cwd: app.getPath('home') });
             const match = stdout.match(/Dashboard URL:\s*(https?:\/\/[^\s]+)/);
             if (match && match[1]) {
                 const dashboardUrl = match[1];

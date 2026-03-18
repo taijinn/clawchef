@@ -2,7 +2,7 @@ import './style.css'
 
 const i18n = {
   en: {
-    title: "OpenClaw Manager",
+    title: "ClawChef - Your Companion AI Butler",
     subtitle: "Configure your local AI agent. Powerful, private, and fully yours.",
     step0: "Welcome",
     step1: "Prerequisites",
@@ -34,7 +34,7 @@ const i18n = {
     control_sub: "Your local agent is configured at"
   },
   zh: {
-    title: "OpenClaw 管理器",
+    title: "ClawChef - 陪伴你的私人AI管家",
     subtitle: "配置您的本地 AI 代理。强大、私密，完全归您所有。",
     step0: "欢迎",
     step1: "前置条件",
@@ -66,7 +66,7 @@ const i18n = {
     control_sub: "您的本地代理已配置在"
   },
   ja: {
-    title: "OpenClaw マネージャー",
+    title: "ClawChef - あなたに付き添うAI執事",
     subtitle: "ローカルAIエージェントの構成。強力でプライベート、完全にあなたのものです。",
     step0: "ようこそ",
     step1: "前提条件",
@@ -107,7 +107,10 @@ function renderShell() {
     <div class="titlebar"></div>
     <div class="app-container">
       <div class="glass-panel animate-fade-in-up">
-        <h1 id="i18n-title" class="text-gradient" style="font-size: 2.5rem; margin-bottom: 0.5rem;">${t('title')}</h1>
+        <div style="display: flex; align-items: center; margin-bottom: 0.5rem; gap: 12px;">
+          <h1 id="i18n-title" class="text-gradient" style="font-size: 2.5rem; margin: 0;">${t('title')}</h1>
+          <span style="font-size: 0.85rem; padding: 2px 8px; border-radius: 12px; background: rgba(99, 102, 241, 0.15); color: var(--accent-primary); border: 1px solid var(--accent-primary); font-weight: 600; letter-spacing: 1px;">BETA</span>
+        </div>
         <p id="i18n-subtitle" class="text-secondary" style="margin-bottom: 2rem;">${t('subtitle')}</p>
         
         <div class="stepper animate-fade-in-up delay-100" id="stepper">
@@ -146,7 +149,7 @@ document.getElementById('lang-select').addEventListener('change', (e) => {
   document.getElementById('i18n-step4').innerText = t('step4');
   document.getElementById('i18n-step5').innerText = t('step5');
   document.getElementById('i18n-debug').innerText = t('debug');
-  
+
   // Re-render the current step so its text also translates
   if (currentStep === 0) renderWelcome();
   else if (currentStep === 1) renderPrerequisites();
@@ -161,34 +164,41 @@ if (window.api && window.api.onDebugLog) {
   window.api.onDebugLog((msg) => {
     const consoleEl = document.getElementById('debug-console');
     if (!consoleEl) return;
-    
+
     const line = document.createElement('div');
     line.className = 'debug-line';
     line.innerText = String(msg);
-    
+
     // Highlight lines that look like commands
     if (msg.startsWith('>')) {
       line.style.color = '#56B6C2'; // Cyan
     } else if (msg.includes('[ERROR]')) {
       line.style.color = '#E06C75'; // Red
     }
-    
+
     consoleEl.appendChild(line);
-    
+
     // Auto-scroll to bottom
     consoleEl.scrollTop = consoleEl.scrollHeight;
   });
 }
 
-let currentStep = 0;
-const configData = {
+let currentStep = parseInt(localStorage.getItem('openclaw-setup-step')) || 0;
+let savedConfig = localStorage.getItem('openclaw-setup-config');
+const configData = savedConfig ? JSON.parse(savedConfig) : {
   apiKey: '',
   apiKeys: [{ id: Date.now(), provider: 'OpenAI', key: '' }],
-  channels: [{ id: Date.now(), provider: 'Slack', key: '' }],
+  channels: [{ id: Date.now(), provider: 'Telegram', key: '' }],
   workspacePath: '~/openclaw-workspace'
 };
 
+function saveProgress() {
+  localStorage.setItem('openclaw-setup-step', currentStep);
+  localStorage.setItem('openclaw-setup-config', JSON.stringify(configData));
+}
+
 function updateStepper() {
+  saveProgress();
   const steps = document.querySelectorAll('.step-item');
   steps.forEach((step, index) => {
     step.classList.remove('active', 'completed');
@@ -196,6 +206,28 @@ function updateStepper() {
     if (index === currentStep) step.classList.add('active');
   });
 }
+
+document.getElementById('stepper').addEventListener('click', (e) => {
+  const stepEl = e.target.closest('.step-item');
+  if (!stepEl) return;
+  const targetStep = parseInt(stepEl.getAttribute('data-step'));
+
+  if (targetStep < currentStep || stepEl.classList.contains('completed') || stepEl.classList.contains('active')) {
+    if (currentStep === 2) {
+      const wInput = document.getElementById('input-workspace');
+      if (wInput) configData.workspacePath = wInput.value;
+    }
+
+    currentStep = targetStep;
+    updateStepper();
+    if (currentStep === 0) renderWelcome();
+    else if (currentStep === 1) renderPrerequisites();
+    else if (currentStep === 2) renderWorkspace();
+    else if (currentStep === 3) renderApiKey();
+    else if (currentStep === 4) renderChannelSetup();
+    else if (currentStep === 5) renderControlPanel();
+  }
+});
 
 const stepContent = document.getElementById('step-content');
 
@@ -286,7 +318,7 @@ function renderPrerequisites() {
   const checkPrereqs = async () => {
     try {
       const results = await window.api.checkPrerequisites();
-      
+
       stepContent.innerHTML = `
         <div class="animate-fade-in-up">
             <h2 class="mb-lg">${t('prereq_title')}</h2>
@@ -317,31 +349,31 @@ function renderPrerequisites() {
           renderWorkspace();
         });
       }
-      
+
       // Attach auto-install listeners
       document.querySelectorAll('.install-dep-btn').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-              const depName = e.target.getAttribute('data-dep');
-              
-              // Set button to loading state
-              e.target.innerText = 'Installing...';
-              e.target.disabled = true;
-              
-              try {
-                  const installResult = await window.api.installDependency(depName);
-                  if (installResult.success) {
-                      // Re-run checks to verify and update UI
-                      checkPrereqs();
-                  } else {
-                      e.target.innerText = 'Failed';
-                      e.target.classList.replace('btn-secondary', 'btn-error');
-                      alert(`Failed to install ${depName}. See the Debug Console for details.`);
-                  }
-              } catch (err) {
-                 e.target.innerText = 'Error';
-                 alert("Installation exception: " + err.message);
-              }
-          });
+        btn.addEventListener('click', async (e) => {
+          const depName = e.target.getAttribute('data-dep');
+
+          // Set button to loading state
+          e.target.innerText = 'Installing...';
+          e.target.disabled = true;
+
+          try {
+            const installResult = await window.api.installDependency(depName);
+            if (installResult.success) {
+              // Re-run checks to verify and update UI
+              checkPrereqs();
+            } else {
+              e.target.innerText = 'Failed';
+              e.target.classList.replace('btn-secondary', 'btn-error');
+              alert(`Failed to install ${depName}. See the Debug Console for details.`);
+            }
+          } catch (err) {
+            e.target.innerText = 'Error';
+            alert("Installation exception: " + err.message);
+          }
+        });
       });
 
     } catch (e) {
@@ -391,7 +423,7 @@ function renderWorkspace() {
   document.getElementById('btn-next').addEventListener('click', async () => {
     const btnNext = document.getElementById('btn-next');
     const statusDiv = document.getElementById('setup-status');
-    
+
     configData.workspacePath = document.getElementById('input-workspace').value;
     btnNext.disabled = true;
     btnNext.innerText = 'Installing...';
@@ -402,7 +434,7 @@ function renderWorkspace() {
       if (window.api && window.api.setupWorkspace) {
         await window.api.setupWorkspace(configData.workspacePath);
       }
-      
+
       currentStep = 3;
       updateStepper();
       renderApiKey();
@@ -433,12 +465,12 @@ function renderApiKey() {
   const renderRows = () => {
     const container = document.getElementById('api-keys-container');
     if (!container) return;
-    
+
     container.innerHTML = configData.apiKeys.map((item) => `
       <div class="input-group" style="display: flex; gap: 10px; margin-bottom: 1rem; align-items: flex-end;">
         <div style="flex: 1;">
           <label class="input-label" style="font-size: 0.75rem;">Provider</label>
-          <select class="input-field provider-select" data-id="${item.id}" style="padding: 0.6rem; background: var(--bg-tertiary);">
+          <select class="input-field provider-select" data-id="${item.id}" style="padding: 0.6rem;">
             ${providers.map(p => `<option value="${p}" ${item.provider === p ? 'selected' : ''}>${p}</option>`).join('')}
           </select>
         </div>
@@ -535,37 +567,63 @@ function renderApiKey() {
 /* -- Step 4: Channel Setup -- */
 function renderChannelSetup() {
   if (!configData.channels || configData.channels.length === 0) {
-    configData.channels = [{ id: Date.now(), provider: 'Slack', key: '' }];
+    configData.channels = [{ id: Date.now(), provider: 'Telegram', key: '' }];
   }
 
-  const defaultProviders = ['Slack', 'Discord', 'Telegram', 'Viber', 'WhatsApp', 'Webhook', 'Terminal', 'Custom...'];
+  const defaultProviders = ['Telegram', 'Lark (Feishu)', 'WhatsApp'];
+
+  // Migrate any old saved channels from removed platforms to the first default (Telegram)
+  configData.channels.forEach(ch => {
+    if (!defaultProviders.includes(ch.provider)) {
+      ch.provider = 'Telegram';
+      ch.key = '';
+    }
+  });
 
   const renderRows = () => {
     const container = document.getElementById('channels-container');
     if (!container) return;
-    
+
     container.innerHTML = configData.channels.map((item) => `
-      <div class="input-group" style="display: flex; gap: 10px; margin-bottom: 1rem; align-items: flex-end;">
+      <div class="input-group" style="display: flex; gap: 10px; margin-bottom: 1rem; align-items: flex-start;">
         <div style="flex: 1;">
           <label class="input-label" style="font-size: 0.75rem;">Platform</label>
-          <select class="input-field channel-select" data-id="${item.id}" style="padding: 0.6rem; background: var(--bg-tertiary);">
+          <select class="input-field channel-select" data-id="${item.id}" style="padding: 0.6rem;">
             ${defaultProviders.map(p => `<option value="${p}" ${item.provider === p ? 'selected' : ''}>${p}</option>`).join('')}
+            <option disabled>──────────</option>
+            <option disabled>More coming soon...</option>
           </select>
         </div>
         <div style="flex: 2;">
-          <label class="input-label" style="font-size: 0.75rem;">${item.provider === 'WhatsApp' ? 'WhatsApp Authorization' : 'Bot Token / Webhook URL'}</label>
+          <label class="input-label" style="font-size: 0.75rem;">${item.provider === 'WhatsApp' ? 'WhatsApp Authorization' : item.provider === 'Lark (Feishu)' ? 'Lark Configuration' : 'Bot Token / Webhook URL'}</label>
           ${item.provider === 'WhatsApp' ? (
-            item.key === 'linked' ? 
-              `<div style="height: 48px; border: 1px solid var(--success-color); border-radius: var(--radius-md); background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center; color: var(--success-color); font-weight: 600;">✅ WhatsApp Linked</div>` 
-            : item.scanning ? 
-              `<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(255,159,28,0.1); padding: 0.5rem; border: 1px dashed var(--accent-primary); border-radius: var(--radius-md); width: 100%; height: 48px; margin-top: 5px; color: var(--accent-primary); font-size: 0.85rem; font-weight: 500;"><div>👀 Scan the QR Code from the Debug Log below</div></div>`
-            : 
-              `<button class="btn btn-secondary btn-generate-wa" data-id="${item.id}" style="width: 100%; height: 48px; border: 1px dashed var(--accent-primary); color: var(--text-primary);">Generate QR Code</button>`
-          ) : (
-            `<input type="password" class="input-field channel-input" data-id="${item.id}" placeholder="Enter connection string..." value="${item.key}" />`
-          )}
+        item.key === 'linked' ?
+          `<div style="height: 48px; border: 1px solid var(--success-color); border-radius: var(--radius-md); background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center; color: var(--success-color); font-weight: 600;">✅ WhatsApp Linked</div>`
+          : item.scanning ?
+            `<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(255,159,28,0.1); padding: 0.5rem; border: 1px dashed var(--accent-primary); border-radius: var(--radius-md); width: 100%; height: 48px; margin-top: 5px; color: var(--accent-primary); font-size: 0.85rem; font-weight: 500;"><div>👀 Scan the QR Code from the Debug Log below</div></div>`
+            :
+            `<button class="btn btn-secondary btn-generate-wa" data-id="${item.id}" style="width: 100%; height: 48px; border: 1px dashed var(--accent-primary); color: var(--text-primary);">Generate QR Code</button>`
+      ) : item.provider === 'Lark (Feishu)' ? (
+        `<div style="display: flex; flex-direction: column; gap: 4px;">
+           <select class="input-field channel-input" data-id="${item.id}" data-field="domain" style="margin-bottom: 2px; padding: 0.6rem;">
+             <option value="feishu" ${item.domain === 'feishu' || !item.domain ? 'selected' : ''}>Region: Feishu China (feishu.cn)</option>
+             <option value="lark" ${item.domain === 'lark' ? 'selected' : ''}>Region: Lark Global (larksuite.com)</option>
+           </select>
+           <select class="input-field channel-input" data-id="${item.id}" data-field="dmPolicy" style="margin-bottom: 2px; padding: 0.6rem;">
+             <option value="pairing" ${item.dmPolicy === 'pairing' || !item.dmPolicy ? 'selected' : ''}>Access: Require UI Pairing Message</option>
+             <option value="open" ${item.dmPolicy === 'open' ? 'selected' : ''}>Access: Open (Anyone can message)</option>
+             <option value="allowlist" ${item.dmPolicy === 'allowlist' ? 'selected' : ''}>Access: Allowlist Only</option>
+           </select>
+           <input type="text" class="input-field channel-input" data-id="${item.id}" data-field="appId" placeholder="App ID..." value="${item.appId || ''}" style="margin-bottom: 2px;" />
+           <input type="password" class="input-field channel-input" data-id="${item.id}" data-field="appSecret" placeholder="App Secret..." value="${item.appSecret || ''}" style="margin-bottom: 2px;" />
+           <input type="password" class="input-field channel-input" data-id="${item.id}" data-field="encryptKey" placeholder="Encrypt Key (Optional)..." value="${item.encryptKey || ''}" style="margin-bottom: 2px;" />
+           <input type="password" class="input-field channel-input" data-id="${item.id}" data-field="verificationToken" placeholder="Verification Token (Optional)..." value="${item.verificationToken || ''}" />
+         </div>`
+      ) : (
+        `<input type="password" class="input-field channel-input" data-id="${item.id}" placeholder="Enter connection string..." value="${item.key || ''}" />`
+      )}
         </div>
-        <button class="btn btn-secondary remove-channel-btn" data-id="${item.id}" style="padding: 0.6rem 0.8rem; height: 40px; color: var(--error-color); border: 1px solid var(--error-color); background: transparent;" ${configData.channels.length === 1 ? 'disabled' : ''}>✕</button>
+        <button class="btn btn-secondary remove-channel-btn" data-id="${item.id}" style="padding: 0.6rem 0.8rem; height: 40px; color: var(--error-color); border: 1px solid var(--error-color); background: transparent; margin-top: 1.5rem;" ${configData.channels.length === 1 ? 'disabled' : ''}>✕</button>
       </div>
     `).join('');
 
@@ -576,6 +634,13 @@ function renderChannelSetup() {
         if (row) {
           row.provider = e.target.value;
           if (row.provider === 'WhatsApp') row.key = '';
+          else if (row.provider === 'Lark (Feishu)') {
+            row.appSecret = '';
+            row.encryptKey = '';
+            row.verificationToken = '';
+            row.domain = 'feishu';
+            row.dmPolicy = 'pairing';
+          }
           renderRows();
         }
       });
@@ -585,7 +650,14 @@ function renderChannelSetup() {
       el.addEventListener('input', (e) => {
         const id = parseInt(e.target.getAttribute('data-id'));
         const row = configData.channels.find(r => r.id === id);
-        if (row) row.key = e.target.value;
+        if (row) {
+          if (row.provider === 'Lark (Feishu)') {
+            const field = e.target.getAttribute('data-field');
+            if (field) row[field] = e.target.value;
+          } else {
+            row.key = e.target.value;
+          }
+        }
       });
     });
 
@@ -608,20 +680,20 @@ function renderChannelSetup() {
         renderRows();
 
         try {
-           const res = await window.api.generateWhatsAppQR(configData.workspacePath);
-           if (res.success) {
-               row.key = 'linked';
-               row.scanning = false;
-               renderRows();
-           } else {
-               row.scanning = false;
-               renderRows();
-               alert("Failed to link WhatsApp: " + res.error);
-           }
-        } catch(err) {
-           row.scanning = false;
-           renderRows();
-           alert("Error linking WhatsApp.");
+          const res = await window.api.generateWhatsAppQR(configData.workspacePath);
+          if (res.success) {
+            row.key = 'linked';
+            row.scanning = false;
+            renderRows();
+          } else {
+            row.scanning = false;
+            renderRows();
+            alert("Failed to link WhatsApp: " + res.error);
+          }
+        } catch (err) {
+          row.scanning = false;
+          renderRows();
+          alert("Error linking WhatsApp.");
         }
       });
     });
@@ -659,13 +731,19 @@ function renderChannelSetup() {
   });
 
   document.getElementById('btn-next').addEventListener('click', async () => {
+    const hasLark = configData.channels.some(c => c.provider === 'Lark (Feishu)');
+    if (hasLark) {
+      const confirmInstall = confirm('Lark (Feishu) channel requires downloading an additional free plugin (@openclaw/feishu) from NPM.\\n\\nDo you want to proceed and install the plugin automatically?');
+      if (!confirmInstall) return;
+    }
+
     const btnNext = document.getElementById('btn-next');
     const statusDiv = document.getElementById('channel-status');
 
     btnNext.disabled = true;
     btnNext.innerText = 'Connecting...';
     statusDiv.style.display = 'block';
-    statusDiv.innerText = 'Writing channel configuration...';
+    statusDiv.innerText = hasLark ? 'Installing Feishu plugin & Writing configuration...' : 'Writing channel configuration...';
 
     try {
       if (window.api && window.api.saveChannels) {
@@ -690,36 +768,89 @@ function renderControlPanel() {
       <h2 id="control-title" class="text-gradient mb-md">${t('control_title')}</h2>
       <p id="control-subtitle" class="text-secondary mb-xl">${t('control_sub')} ${configData.workspacePath}</p>
       
-      <div id="control-actions" class="flex justify-center gap-md mt-4" style="flex-direction: column; max-width: 300px; margin: 0 auto;">
-        <button class="btn btn-primary" id="btn-start" style="width: 100%; margin-bottom: 0.5rem;">${t('btn_start')}</button>
-        
-        <div class="test-message-card" style="background: var(--bg-tertiary); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 0.5rem; text-align: left; border: 1px solid var(--border-color);">
-           <label class="input-label" style="font-size: 0.75rem; margin-bottom: 4px;">Test Integration (Target Number)</label>
-           <input type="text" id="test-phone" class="input-field" placeholder="+1234567890" style="margin-bottom: 8px; padding: 0.6rem; font-size: 0.85rem;" />
-           
-           <label class="input-label" style="font-size: 0.75rem; margin-bottom: 4px;">Message Body</label>
-           <input type="text" id="test-msg" class="input-field" placeholder="Hello from OpenClaw" style="margin-bottom: 8px; padding: 0.6rem; font-size: 0.85rem;" />
-           
-           <button class="btn btn-secondary" id="btn-test-send" style="width: 100%; border: 1px dashed var(--accent-primary); color: var(--text-primary); margin-top: 4px;">Send Test Message</button>
+      <div id="control-actions" class="flex justify-center gap-xl mt-4" style="flex-direction: row; max-width: 700px; margin: 0 auto; align-items: flex-start;">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+          <button class="btn btn-primary" id="btn-start" style="width: 100%;">${t('btn_start')}</button>
+          <button class="btn btn-secondary" id="btn-stop" style="width: 100%;" disabled>${t('btn_stop')}</button>
+          <button class="btn btn-secondary" id="btn-kill" style="width: 100%; color: #ff9f1c; border-color: #ff9f1c;">${t('btn_kill')}</button>
+          
+          <button class="btn" id="btn-uninstall" style="width: 100%; background: transparent; border: 1px solid var(--error-color); color: var(--error-color); margin-top: 0.5rem;">${t('btn_uninstall')}</button>
         </div>
-
-        <button class="btn btn-secondary" id="btn-stop" style="width: 100%; margin-bottom: 0.5rem;" disabled>${t('btn_stop')}</button>
-        <button class="btn btn-secondary" id="btn-kill" style="width: 100%; margin-bottom: 1.5rem; color: #ff9f1c; border-color: #ff9f1c;">${t('btn_kill')}</button>
         
-        <button class="btn" id="btn-uninstall" style="width: 100%; background: transparent; border: 1px solid var(--error-color); color: var(--error-color);">${t('btn_uninstall')}</button>
+        <div style="flex: 1;">
+          <div class="test-message-card" style="background: var(--bg-tertiary); padding: 1rem; border-radius: var(--radius-md); text-align: left; border: 1px solid var(--border-color);">
+             <div class="flex" style="gap: 8px; margin-bottom: 8px;">
+               <div style="flex: 1;">
+                 <label class="input-label" style="font-size: 0.75rem; margin-bottom: 4px;">Channel</label>
+                 <select id="test-channel" class="input-field" style="padding: 0.6rem; font-size: 0.85rem;">
+                   <option value="whatsapp">WhatsApp</option>
+                   <option value="telegram">Telegram</option>
+                   <option value="feishu">Lark (Feishu)</option>
+                   <option value="slack">Slack</option>
+                   <option value="discord">Discord</option>
+                 </select>
+               </div>
+               <div style="flex: 2;">
+                 <label class="input-label" style="font-size: 0.75rem; margin-bottom: 4px;">Target (@user or number)</label>
+                 <input type="text" id="test-phone" class="input-field" placeholder="Target..." style="padding: 0.6rem; font-size: 0.85rem;" />
+               </div>
+             </div>
+             
+             <label class="input-label" style="font-size: 0.75rem; margin-bottom: 4px;">Message Body</label>
+             <input type="text" id="test-msg" class="input-field" placeholder="Hello from OpenClaw" style="margin-bottom: 8px; padding: 0.6rem; font-size: 0.85rem;" />
+             
+              <button class="btn btn-secondary" id="btn-test-send" style="width: 100%; border: 1px dashed var(--accent-primary); color: var(--text-primary); margin-top: 4px;">Send Test Message</button>
+           </div>
+           
+           <div class="test-message-card" style="background: var(--bg-tertiary); padding: 1rem; border-radius: var(--radius-md); text-align: left; border: 1px solid var(--border-color); margin-top: 1rem;">
+             <div class="flex" style="gap: 8px; margin-bottom: 8px;">
+               <div style="flex: 1;">
+                 <label class="input-label" style="font-size: 0.75rem; margin-bottom: 4px;">Approval Channel</label>
+                 <select id="pairing-channel" class="input-field" style="padding: 0.6rem; font-size: 0.85rem;">
+                   <option value="feishu">Lark (Feishu)</option>
+                   <option value="telegram">Telegram</option>
+                 </select>
+               </div>
+               <div style="flex: 2;">
+                 <label class="input-label" style="font-size: 0.75rem; margin-bottom: 4px;">Pairing Code (from bot DM)</label>
+                 <input type="text" id="pairing-code" class="input-field" placeholder="E.g., H9ZEHY8R" style="padding: 0.6rem; font-size: 0.85rem;" />
+               </div>
+             </div>
+             <button class="btn btn-secondary" id="btn-pairing-approve" style="width: 100%; border: 1px dashed var(--accent-primary); color: var(--text-primary); margin-top: 4px;">Approve Pairing Code</button>
+           </div>
+        </div>
       </div>
       <div id="panel-status" class="mt-4" style="min-height: 1.5rem; font-size: 0.9rem;"></div>
+      
+      <div class="flex justify-start gap-md" style="margin-top: 2rem;">
+        <button class="btn btn-secondary" id="btn-back">${t('btn_back')}</button>
+      </div>
     </div>
   `;
 
   const btnStart = document.getElementById('btn-start');
   const btnTestSend = document.getElementById('btn-test-send');
+  const inputTestChannel = document.getElementById('test-channel');
   const inputTestPhone = document.getElementById('test-phone');
   const inputTestMsg = document.getElementById('test-msg');
+  
+  const btnPairingApprove = document.getElementById('btn-pairing-approve');
+  const inputPairingChannel = document.getElementById('pairing-channel');
+  const inputPairingCode = document.getElementById('pairing-code');
+
   const btnStop = document.getElementById('btn-stop');
   const btnKill = document.getElementById('btn-kill');
+  const btnBack = document.getElementById('btn-back');
   const btnUninstall = document.getElementById('btn-uninstall');
   const statusDiv = document.getElementById('panel-status');
+
+  if (btnBack) {
+    btnBack.addEventListener('click', () => {
+      currentStep = 4;
+      updateStepper();
+      renderChannelSetup();
+    });
+  }
 
   const setStatus = (msg, isError = false) => {
     statusDiv.innerText = msg;
@@ -758,36 +889,63 @@ function renderControlPanel() {
     }
   });
 
+  if (btnPairingApprove) {
+    btnPairingApprove.addEventListener('click', async () => {
+      const channel = inputPairingChannel.value;
+      const code = inputPairingCode.value.trim();
+      
+      if (!code) {
+        setStatus('Please enter a pairing code.', true);
+        return;
+      }
+      
+      setStatus(`Approving pairing code ${code} for ${channel}...`);
+      btnPairingApprove.disabled = true;
+      try {
+        if (window.api && window.api.approvePairing) {
+          const res = await window.api.approvePairing({ workspacePath: configData.workspacePath, channel, code });
+          if (!res.success) throw new Error(res.error || res.message);
+          setStatus(`Pairing code approved successfully!`);
+        }
+      } catch (e) {
+        setStatus('Pairing approval failed: ' + e.message, true);
+      } finally {
+        btnPairingApprove.disabled = false;
+      }
+    });
+  }
+
   btnTestSend.addEventListener('click', async () => {
+    const channel = inputTestChannel.value;
     const phone = inputTestPhone.value.trim();
     const msg = inputTestMsg.value.trim();
-    
+
     if (!phone || !msg) {
-        setStatus('Please enter both number and message.', true);
-        return;
+      setStatus('Please enter both number and message.', true);
+      return;
     }
 
     setStatus('Dispatching test message...');
     btnTestSend.disabled = true;
     btnTestSend.innerText = 'Sending...';
-    
+
     try {
       if (window.api && window.api.testMessage) {
-        const res = await window.api.testMessage(configData.workspacePath, phone, msg);
+        const res = await window.api.testMessage(configData.workspacePath, channel, phone, msg);
         if (!res.success) throw new Error(res.error || res.message);
       }
       setStatus('Message command executed! Check log.');
       btnTestSend.innerText = 'Sent!';
       setTimeout(() => {
-          btnTestSend.innerText = 'Send Test Message';
-          btnTestSend.disabled = false;
+        btnTestSend.innerText = 'Send Test Message';
+        btnTestSend.disabled = false;
       }, 3000);
     } catch (e) {
       setStatus('Dispatch failed: ' + e.message, true);
       btnTestSend.innerText = 'Error';
       setTimeout(() => {
-          btnTestSend.innerText = 'Send Test Message';
-          btnTestSend.disabled = false;
+        btnTestSend.innerText = 'Send Test Message';
+        btnTestSend.disabled = false;
       }, 3000);
     }
   });
@@ -835,4 +993,11 @@ function renderControlPanel() {
 }
 
 // Initialize
-renderWelcome();
+if (currentStep === 0) renderWelcome();
+else if (currentStep === 1) renderPrerequisites();
+else if (currentStep === 2) renderWorkspace();
+else if (currentStep === 3) renderApiKey();
+else if (currentStep === 4) renderChannelSetup();
+else if (currentStep === 5) renderControlPanel();
+
+updateStepper();
