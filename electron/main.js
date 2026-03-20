@@ -364,6 +364,48 @@ ipcMain.handle('save-channels', async (event, config) => {
     return { success: true };
 });
 
+ipcMain.handle('login-codex', async () => {
+    sendLog('> [SYSTEM] Launching OpenAI Codex OAuth Login...');
+    try {
+        const wrapperPath = path.join(app.getPath('home'), '.openclaw', 'codex-login.mjs');
+        const wrapperCode = `Object.defineProperty(process.stdin, 'isTTY', {value: true}); Object.defineProperty(process.stdout, 'isTTY', {value: true}); process.argv.splice(1, 0, 'openclaw'); import('/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs');`;
+        await fs.mkdir(path.join(app.getPath('home'), '.openclaw'), { recursive: true });
+        await fs.writeFile(wrapperPath, wrapperCode, 'utf-8');
+        
+        sendLog(`> [EXEC] openclaw models auth login --provider openai-codex`);
+        await runCommandStreaming('node', [wrapperPath, '--', 'models', 'auth', 'login', '--provider', 'openai-codex'], app.getPath('home'));
+        
+        // Clean up wrapper script and log success
+        await fs.rm(wrapperPath, { force: true }).catch(() => {});
+        sendLog('> [SYSTEM] OpenAI Codex OAuth Login Successful!');
+        return { success: true };
+    } catch (error) {
+        sendLog(`> [SYSTEM] [ERROR] OpenAI Codex Login failed: ${error.message}`);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('login-gemini', async () => {
+    sendLog('> [SYSTEM] Launching Google Gemini OAuth Login...');
+    try {
+        const wrapperPath = path.join(app.getPath('home'), '.openclaw', 'gemini-login.mjs');
+        const wrapperCode = `Object.defineProperty(process.stdin, 'isTTY', {value: true}); Object.defineProperty(process.stdout, 'isTTY', {value: true}); process.argv.splice(1, 0, 'openclaw'); import('/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs');`;
+        await fs.mkdir(path.join(app.getPath('home'), '.openclaw'), { recursive: true });
+        await fs.writeFile(wrapperPath, wrapperCode, 'utf-8');
+        
+        sendLog(`> [EXEC] openclaw models auth login --provider google-gemini-cli`);
+        await runCommandStreaming('node', [wrapperPath, '--', 'models', 'auth', 'login', '--provider', 'google-gemini-cli'], app.getPath('home'));
+        
+        // Clean up wrapper script and log success
+        await fs.rm(wrapperPath, { force: true }).catch(() => {});
+        sendLog('> [SYSTEM] Google Gemini OAuth Login Successful!');
+        return { success: true };
+    } catch (error) {
+        sendLog(`> [SYSTEM] [ERROR] Google Gemini Login failed: ${error.message}`);
+        return { success: false, error: error.message };
+    }
+});
+
 ipcMain.handle('generate-whatsapp-qr', async (event, workspacePathInput) => {
     sendLog('> [SYSTEM] Launching native WhatsApp Web Linker...');
     sendLog('> [SYSTEM] Look at the Debug Log below to scan the Terminal ASCII QR Code.');
