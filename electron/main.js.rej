@@ -1,0 +1,14 @@
+@@ -321,8 +321,12 @@
+ ipcMain.handle('test-message', async (event, workspacePath, phone, msg) => {
+     try {
+         sendLog(`> [EXEC] openclaw message ${phone} "${msg}" --workspace "${workspacePath}"`);
+-        await runCommandStreaming('openclaw', ['message', phone, msg, '--workspace', workspacePath]);
++        if (msg.includes('telegram') || phone.startsWith('@')) {
++            await runCommandStreaming('openclaw', ['message', '--telegram', phone, msg, '--workspace', workspacePath]);
++        } else {
++            await runCommandStreaming('openclaw', ['message', phone, msg, '--workspace', workspacePath]);
++        }
+         return { success: true };
+     } catch (err) {
+         sendLog(`> [SYSTEM] [ERROR] Test message failed: ${err.message}`);
+ 

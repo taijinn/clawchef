@@ -2,8 +2,8 @@ import './style.css'
 
 const i18n = {
   en: {
-    title: "ClawChef - Your Companion AI Butler",
-    subtitle: "Configure your local AI agent. Powerful, private, and fully yours.",
+    title: "ClawChef - Your OpenClaw Butler",
+    subtitle: "Configure your local AI agent. Easy, Intuitive and Quick!",
     step0: "Welcome",
     step1: "Prerequisites",
     step2: "Workspace",
@@ -31,11 +31,40 @@ const i18n = {
     channel_title: "Channel Setup",
     channel_sub: "Configure where OpenClaw will listen and respond. You can add bots for multiple chat platforms.",
     control_title: "OpenClaw Ready 🎉",
-    control_sub: "Your local agent is configured at"
+    control_sub: "Your local agent is configured at",
+    welcome_text: `OpenClaw is a hobby project and still in beta. Expect sharp edges.
+By default, OpenClaw is a personal agent: one trusted operator boundary.
+This bot can read files and run actions if tools are enabled.
+A bad prompt can trick it into doing unsafe things.
+
+OpenClaw is not a hostile multi-tenant boundary by default.
+If multiple users can message one tool-enabled agent, they share that delegated tool
+authority.
+
+If you’re not comfortable with security hardening and access control, don’t run
+OpenClaw.
+Ask someone experienced to help before enabling tools or exposing it to the internet.
+
+Recommended baseline:
+- Pairing/allowlists + mention gating.
+- Multi-user/shared inbox: split trust boundaries (separate gateway/credentials, ideally
+  separate OS users/hosts).
+- Sandbox + least-privilege tools.
+- Shared inboxes: isolate DM sessions (\`session.dmScope: per-channel-peer\`) and keep
+  tool access minimal.
+- Keep secrets out of the agent’s reachable filesystem.
+- Use the strongest available model for any bot with tools or untrusted inboxes.
+
+Run regularly:
+openclaw security audit --deep
+openclaw security audit --fix
+
+Must read: https://docs.openclaw.ai/gateway/security`,
+    welcome_cb: `I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue?`
   },
   zh: {
-    title: "ClawChef - 陪伴你的私人AI管家",
-    subtitle: "配置您的本地 AI 代理。强大、私密，完全归您所有。",
+    title: "ClawChef - 你的 OpenClaw 管家",
+    subtitle: "配置您的本地 AI 代理。简单、直观且快速！",
     step0: "欢迎",
     step1: "前置条件",
     step2: "工作区",
@@ -63,11 +92,67 @@ const i18n = {
     channel_title: "频道设置",
     channel_sub: "配置 OpenClaw 监听和响应的位置。您可以为多个聊天平台添加机器人。",
     control_title: "OpenClaw 已准备就绪 🎉",
-    control_sub: "您的本地代理已配置在"
+    control_sub: "您的本地代理已配置在",
+    welcome_text: `OpenClaw is a hobby project and still in beta. Expect sharp edges.
+By default, OpenClaw is a personal agent: one trusted operator boundary.
+This bot can read files and run actions if tools are enabled.
+A bad prompt can trick it into doing unsafe things.
+
+OpenClaw is not a hostile multi-tenant boundary by default.
+If multiple users can message one tool-enabled agent, they share that delegated tool
+authority.
+
+If you’re not comfortable with security hardening and access control, don’t run
+OpenClaw.
+Ask someone experienced to help before enabling tools or exposing it to the internet.
+
+Recommended baseline:
+- Pairing/allowlists + mention gating.
+- Multi-user/shared inbox: split trust boundaries (separate gateway/credentials, ideally
+  separate OS users/hosts).
+- Sandbox + least-privilege tools.
+- Shared inboxes: isolate DM sessions (\`session.dmScope: per-channel-peer\`) and keep
+  tool access minimal.
+- Keep secrets out of the agent’s reachable filesystem.
+- Use the strongest available model for any bot with tools or untrusted inboxes.
+
+Run regularly:
+openclaw security audit --deep
+openclaw security audit --fix
+
+Must read: https://docs.openclaw.ai/gateway/security
+
+---
+
+OpenClaw 是一个业余项目，仍处于测试阶段。预计会有一些不完善之处。
+默认情况下，OpenClaw 是一个个人代理：一个信任操作者边界。
+如果启用了工具，此机器人可以读取文件并运行操作。
+糟糕的提示可能会欺骗它执行不安全的操作。
+
+默认情况下，OpenClaw 不是一个敌对的多租户边界。
+如果多个用户可以向一个启用了工具的代理发送消息，他们将共享该委托的工具权限。
+
+如果您对安全加固和访问控制不熟悉，请不要运行 OpenClaw。
+在启用工具或将其暴露到互联网之前，请寻求有经验的人士的帮助。
+
+推荐基线：
+- 配对/允许列表 + @提及门控。
+- 多用户/共享收件箱：分离信任边界（分离网关/凭证，最好是分离的操作系统用户/主机）。
+- 沙盒 + 最小权限工具。
+- 共享收件箱：隔离私信会话（\`session.dmScope: per-channel-peer\`）并保持工具访问权限最小化。
+- 将机密信息保留在代理可访问的文件系统之外。
+- 对于任何具有工具或不受信任的收件箱的机器人，使用最强大的可用模型。
+
+定期运行：
+openclaw security audit --deep
+openclaw security audit --fix
+
+必读：https://docs.openclaw.ai/gateway/security`,
+    welcome_cb: `I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue? / 我理解这是默认针对个人的，共享/多用户使用需要采取锁定措施。继续？`
   },
   ja: {
-    title: "ClawChef - あなたに付き添うAI執事",
-    subtitle: "ローカルAIエージェントの構成。強力でプライベート、完全にあなたのものです。",
+    title: "ClawChef - あなたの OpenClaw 執事",
+    subtitle: "ローカルAIエージェントの構成。簡単、直感的、そして高速！",
     step0: "ようこそ",
     step1: "前提条件",
     step2: "ワークスペース",
@@ -95,7 +180,63 @@ const i18n = {
     channel_title: "チャネル設定",
     channel_sub: "OpenClaw がリッスンおよび応答する場所を構成します。複数のチャット プラットフォーム用のボットを追加できます。",
     control_title: "OpenClaw 準備完了 🎉",
-    control_sub: "ローカル エージェントが次の場所に構成されました: "
+    control_sub: "ローカル エージェントが次の場所に構成されました: ",
+    welcome_text: `OpenClaw is a hobby project and still in beta. Expect sharp edges.
+By default, OpenClaw is a personal agent: one trusted operator boundary.
+This bot can read files and run actions if tools are enabled.
+A bad prompt can trick it into doing unsafe things.
+
+OpenClaw is not a hostile multi-tenant boundary by default.
+If multiple users can message one tool-enabled agent, they share that delegated tool
+authority.
+
+If you’re not comfortable with security hardening and access control, don’t run
+OpenClaw.
+Ask someone experienced to help before enabling tools or exposing it to the internet.
+
+Recommended baseline:
+- Pairing/allowlists + mention gating.
+- Multi-user/shared inbox: split trust boundaries (separate gateway/credentials, ideally
+  separate OS users/hosts).
+- Sandbox + least-privilege tools.
+- Shared inboxes: isolate DM sessions (\`session.dmScope: per-channel-peer\`) and keep
+  tool access minimal.
+- Keep secrets out of the agent’s reachable filesystem.
+- Use the strongest available model for any bot with tools or untrusted inboxes.
+
+Run regularly:
+openclaw security audit --deep
+openclaw security audit --fix
+
+Must read: https://docs.openclaw.ai/gateway/security
+
+---
+
+OpenClaw はホビープロジェクトであり、まだベータ版です。不具合がある可能性があります。
+デフォルトでは、OpenClaw はパーソナルエージェントであり、単一の信頼できるオペレータ境界です。
+ツールが有効な場合、このボットはファイルを読み取り、アクションを実行できます。
+悪意のあるプロンプトにより、安全でない操作を実行させられる可能性があります。
+
+デフォルトでは、OpenClaw は敵対的なマルチテナント境界ではありません。
+複数のユーザーがツールが有効なエージェントにメッセージを送信できる場合、委任されたツール権限を共有します。
+
+セキュリティの強化やアクセス制御に慣れていない場合は、OpenClaw を実行しないでください。
+ツールを有効にする前や、インターネットに公開する前に、経験豊富な人に助けを求めてください。
+
+推奨ベースライン:
+- ペアリング/許可リスト + メンションゲート。
+- マルチユーザー/共有インボックス: 信頼境界を分離します (ゲートウェイ/資格情報を分離、理想的には OS ユーザー/ホストを分離)。
+- サンドボックス + 最小権限ツール。
+- 共有インボックス: DM セッションを分離し (\`session.dmScope: per-channel-peer\`)、ツールへのアクセスを最小限に抑えます。
+- エージェントがアクセス可能なファイルシステムにシークレットを配置しないでください。
+- ツールを持つボットや信頼できないインボックスを持つボットには、利用可能な最強のモデルを使用してください。
+
+定期的な実行:
+openclaw security audit --deep
+openclaw security audit --fix
+
+必読: https://docs.openclaw.ai/gateway/security`,
+    welcome_cb: `I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue? / これがデフォルトで個人向けであり、共有/マルチユーザーでの使用には制限が必要であることを理解しています。続行しますか？`
   }
 };
 
@@ -108,7 +249,7 @@ function renderShell() {
     <div class="app-container">
       <div class="glass-panel animate-fade-in-up">
         <div style="display: flex; align-items: center; margin-bottom: 0.5rem; gap: 12px;">
-          <h1 id="i18n-title" class="text-gradient" style="font-size: 2.5rem; margin: 0;">${t('title')}</h1>
+          <h1 id="i18n-title" class="text-gradient" style="font-size: 2rem; font-weight: 400; margin: 0;">${t('title')}</h1>
           <span style="font-size: 0.85rem; padding: 2px 8px; border-radius: 12px; background: rgba(99, 102, 241, 0.15); color: var(--accent-primary); border: 1px solid var(--accent-primary); font-weight: 600; letter-spacing: 1px;">BETA</span>
         </div>
         <p id="i18n-subtitle" class="text-secondary" style="margin-bottom: 2rem;">${t('subtitle')}</p>
@@ -236,39 +377,12 @@ function renderWelcome() {
   stepContent.innerHTML = `
     <div class="animate-fade-in-up">
       <h2 class="mb-lg" style="color: var(--error-color);">${t('welcome_title')}</h2>
-      <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.3); padding: 1.2rem; border-radius: var(--radius-md); font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap;">OpenClaw is a hobby project and still in beta. Expect sharp edges.
-By default, OpenClaw is a personal agent: one trusted operator boundary.
-This bot can read files and run actions if tools are enabled.
-A bad prompt can trick it into doing unsafe things.
-
-OpenClaw is not a hostile multi-tenant boundary by default.
-If multiple users can message one tool-enabled agent, they share that delegated tool
-authority.
-
-If you’re not comfortable with security hardening and access control, don’t run
-OpenClaw.
-Ask someone experienced to help before enabling tools or exposing it to the internet.
-
-Recommended baseline:
-- Pairing/allowlists + mention gating.
-- Multi-user/shared inbox: split trust boundaries (separate gateway/credentials, ideally
-  separate OS users/hosts).
-- Sandbox + least-privilege tools.
-- Shared inboxes: isolate DM sessions (\`session.dmScope: per-channel-peer\`) and keep
-  tool access minimal.
-- Keep secrets out of the agent’s reachable filesystem.
-- Use the strongest available model for any bot with tools or untrusted inboxes.
-
-Run regularly:
-openclaw security audit --deep
-openclaw security audit --fix
-
-Must read: https://docs.openclaw.ai/gateway/security</div>
+      <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.3); padding: 1.2rem; border-radius: var(--radius-md); font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap;" id="i18n-welcome-text">${t('welcome_text')}</div>
       
       <div class="input-group" style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 2rem;">
         <input type="checkbox" id="accept-risk-cb" style="margin-top: 4px; width: 16px; height: 16px; cursor: pointer;">
-        <label for="accept-risk-cb" style="font-size: 0.9rem; cursor: pointer; user-select: none;">
-          I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue?
+        <label for="accept-risk-cb" style="font-size: 0.9rem; cursor: pointer; user-select: none;" id="i18n-welcome-cb">
+          ${t('welcome_cb')}
         </label>
       </div>
 
@@ -454,12 +568,8 @@ function renderApiKey() {
   }
 
   const providers = [
-    'OpenAI', 'Anthropic', 'Google Gemini', 'Amazon Bedrock', 'ByteDance Doubao',
-    'Cloudflare AI Gateway', 'Claude Max API Proxy', 'Deepgram', 'DeepSeek',
-    'GitHub Copilot', 'GLM Models', 'Hugging Face', 'Kilocode', 'Litellm',
-    'MiniMax', 'Mistral', 'Moonshot AI', 'NVIDIA', 'Ollama', 'OpenCode Go',
-    'OpenCode', 'OpenRouter', 'Qianfan', 'Qwen', 'Synthetic', 'Together',
-    'Vercel AI Gateway', 'Venice AI', 'vLLM', 'Xiaomi MiMo', 'Z.AI', 'Custom...'
+    'OpenAI', 'Anthropic', 'Google Gemini', 'DeepSeek',
+    'Moonshot AI', 'Qwen', 'More coming soon...'
   ];
 
   const renderRows = () => {
@@ -720,7 +830,7 @@ function renderChannelSetup() {
   renderRows();
 
   document.getElementById('btn-add-channel').addEventListener('click', () => {
-    configData.channels.push({ id: Date.now(), provider: 'Discord', key: '' });
+    configData.channels.push({ id: Date.now(), provider: 'Telegram', key: '' });
     renderRows();
   });
 
@@ -749,9 +859,89 @@ function renderChannelSetup() {
       if (window.api && window.api.saveChannels) {
         await window.api.saveChannels(configData);
       }
-      currentStep = 5;
-      updateStepper();
-      renderControlPanel();
+
+      const requiresPairing = configData.channels.some(c =>
+        c.provider === 'Telegram' ||
+        (c.provider === 'Lark (Feishu)' && c.dmPolicy === 'pairing')
+      );
+
+      if (requiresPairing) {
+        statusDiv.innerText = 'Starting engine for Pairing Mode...';
+        try {
+          if (window.api && window.api.startClaw) {
+            await window.api.startClaw({ workspacePath: configData.workspacePath, lang: currentLang });
+          }
+        } catch (e) {
+          console.error('Failed to auto-start daemon for pairing:', e);
+        }
+
+        btnNext.style.display = 'none';
+        document.getElementById('btn-add-channel').style.display = 'none';
+        document.getElementById('channels-container').innerHTML = `
+          <div class="test-message-card animate-fade-in-up" style="background: var(--bg-tertiary); padding: 1rem; border-radius: var(--radius-md); text-align: left; border: 1px dashed var(--accent-primary); margin-top: 1rem;">
+            <h3 style="margin-bottom: 0.5rem; color: var(--text-primary);">Pairing Required</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+              OpenClaw is now running in the background! Please send a direct message containing the word <strong>"pairing"</strong> to your bot on your channel device. The bot will automatically reply to you with a security code.
+            </p>
+            <div class="flex" style="gap: 8px; margin-bottom: 8px;">
+              <div style="flex: 1;">
+                <label class="input-label" style="font-size: 0.75rem; margin-bottom: 4px;">Approval Channel</label>
+                <select id="pairing-channel" class="input-field" style="padding: 0.6rem; font-size: 0.85rem;">
+                  ${configData.channels.filter(c => c.provider === 'Telegram' || (c.provider === 'Lark (Feishu)' && c.dmPolicy === 'pairing')).map(c => `<option value="${c.provider === 'Telegram' ? 'telegram' : 'feishu'}">${c.provider}</option>`).join('')}
+                </select>
+              </div>
+              <div style="flex: 2;">
+                <label class="input-label" style="font-size: 0.75rem; margin-bottom: 4px;">Pairing Code (from bot DM)</label>
+                <input type="text" id="pairing-code" class="input-field" placeholder="E.g., H9ZEHY8R" style="padding: 0.6rem; font-size: 0.85rem;" />
+              </div>
+            </div>
+            <div class="flex gap-sm" style="margin-top: 4px;">
+              <button class="btn btn-secondary" id="btn-pairing-approve" style="flex: 2; border: 1px dashed var(--accent-primary); color: var(--text-primary);">Approve Pairing Code & Continue</button>
+              <button class="btn btn-secondary" id="btn-pairing-skip" style="flex: 1; border: 1px dashed var(--text-secondary); color: var(--text-secondary);">Skip (Already Paired)</button>
+            </div>
+          </div>
+        `;
+
+        statusDiv.style.display = 'none';
+        statusDiv.style.color = 'var(--primary-color)';
+
+        document.getElementById('btn-pairing-approve').addEventListener('click', async () => {
+          const channel = document.getElementById('pairing-channel').value;
+          const code = document.getElementById('pairing-code').value.trim();
+          if (!code) {
+            statusDiv.style.display = 'block';
+            statusDiv.style.color = 'var(--error-color)';
+            statusDiv.innerText = 'Please enter a pairing code.';
+            return;
+          }
+          const btnApprove = document.getElementById('btn-pairing-approve');
+          btnApprove.disabled = true;
+          btnApprove.innerText = 'Approving...';
+          try {
+            const res = await window.api.approvePairing(configData.workspacePath, channel, code);
+            if (!res.success) throw new Error(res.error || res.message);
+            currentStep = 5;
+            updateStepper();
+            renderControlPanel();
+          } catch (err) {
+            statusDiv.style.display = 'block';
+            statusDiv.style.color = 'var(--error-color)';
+            statusDiv.innerText = 'Pairing Failed: ' + err.message;
+            btnApprove.disabled = false;
+            btnApprove.innerText = 'Approve Pairing Code & Continue';
+          }
+        });
+
+        document.getElementById('btn-pairing-skip').addEventListener('click', () => {
+          currentStep = 5;
+          updateStepper();
+          renderControlPanel();
+        });
+      } else {
+        currentStep = 5;
+        updateStepper();
+        renderControlPanel();
+      }
     } catch (e) {
       statusDiv.style.color = 'var(--error-color)';
       statusDiv.innerText = 'Error: ' + e.message;
@@ -799,28 +989,12 @@ function renderControlPanel() {
              <label class="input-label" style="font-size: 0.75rem; margin-bottom: 4px;">Message Body</label>
              <input type="text" id="test-msg" class="input-field" placeholder="Hello from OpenClaw" style="margin-bottom: 8px; padding: 0.6rem; font-size: 0.85rem;" />
              
-              <button class="btn btn-secondary" id="btn-test-send" style="width: 100%; border: 1px dashed var(--accent-primary); color: var(--text-primary); margin-top: 4px;">Send Test Message</button>
-           </div>
-           
-           <div class="test-message-card" style="background: var(--bg-tertiary); padding: 1rem; border-radius: var(--radius-md); text-align: left; border: 1px solid var(--border-color); margin-top: 1rem;">
-             <div class="flex" style="gap: 8px; margin-bottom: 8px;">
-               <div style="flex: 1;">
-                 <label class="input-label" style="font-size: 0.75rem; margin-bottom: 4px;">Approval Channel</label>
-                 <select id="pairing-channel" class="input-field" style="padding: 0.6rem; font-size: 0.85rem;">
-                   <option value="feishu">Lark (Feishu)</option>
-                   <option value="telegram">Telegram</option>
-                 </select>
-               </div>
-               <div style="flex: 2;">
-                 <label class="input-label" style="font-size: 0.75rem; margin-bottom: 4px;">Pairing Code (from bot DM)</label>
-                 <input type="text" id="pairing-code" class="input-field" placeholder="E.g., H9ZEHY8R" style="padding: 0.6rem; font-size: 0.85rem;" />
-               </div>
-             </div>
-             <button class="btn btn-secondary" id="btn-pairing-approve" style="width: 100%; border: 1px dashed var(--accent-primary); color: var(--text-primary); margin-top: 4px;">Approve Pairing Code</button>
+             <button class="btn btn-secondary" id="btn-test-send" style="width: 100%; border: 1px dashed var(--accent-primary); color: var(--text-primary); margin-top: 4px;">Send Test Message</button>
+             
+             <div id="panel-status" class="mt-2" style="min-height: 1.5rem; font-size: 0.85rem; text-align: center;"></div>
            </div>
         </div>
       </div>
-      <div id="panel-status" class="mt-4" style="min-height: 1.5rem; font-size: 0.9rem;"></div>
       
       <div class="flex justify-start gap-md" style="margin-top: 2rem;">
         <button class="btn btn-secondary" id="btn-back">${t('btn_back')}</button>
@@ -833,10 +1007,6 @@ function renderControlPanel() {
   const inputTestChannel = document.getElementById('test-channel');
   const inputTestPhone = document.getElementById('test-phone');
   const inputTestMsg = document.getElementById('test-msg');
-  
-  const btnPairingApprove = document.getElementById('btn-pairing-approve');
-  const inputPairingChannel = document.getElementById('pairing-channel');
-  const inputPairingCode = document.getElementById('pairing-code');
 
   const btnStop = document.getElementById('btn-stop');
   const btnKill = document.getElementById('btn-kill');
@@ -889,31 +1059,6 @@ function renderControlPanel() {
     }
   });
 
-  if (btnPairingApprove) {
-    btnPairingApprove.addEventListener('click', async () => {
-      const channel = inputPairingChannel.value;
-      const code = inputPairingCode.value.trim();
-      
-      if (!code) {
-        setStatus('Please enter a pairing code.', true);
-        return;
-      }
-      
-      setStatus(`Approving pairing code ${code} for ${channel}...`);
-      btnPairingApprove.disabled = true;
-      try {
-        if (window.api && window.api.approvePairing) {
-          const res = await window.api.approvePairing({ workspacePath: configData.workspacePath, channel, code });
-          if (!res.success) throw new Error(res.error || res.message);
-          setStatus(`Pairing code approved successfully!`);
-        }
-      } catch (e) {
-        setStatus('Pairing approval failed: ' + e.message, true);
-      } finally {
-        btnPairingApprove.disabled = false;
-      }
-    });
-  }
 
   btnTestSend.addEventListener('click', async () => {
     const channel = inputTestChannel.value;

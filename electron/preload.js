@@ -14,7 +14,8 @@ contextBridge.exposeInMainWorld(
         killAllTasks: () => ipcRenderer.invoke('kill-all-tasks'),
         uninstallClaw: (workspacePath) => ipcRenderer.invoke('uninstall-claw', workspacePath),
         generateWhatsAppQR: (workspacePath) => ipcRenderer.invoke('generate-whatsapp-qr', workspacePath),
-        testMessage: (workspacePath, phone, msg) => ipcRenderer.invoke('test-message', workspacePath, phone, msg),
+        testMessage: (workspacePath, channel, phone, msg) => ipcRenderer.invoke('test-message', workspacePath, channel, phone, msg),
+        approvePairing: (workspacePath, channel, code) => ipcRenderer.invoke('approve-pairing', workspacePath, channel, code),
         onDebugLog: (callback) => ipcRenderer.on('debug-log', (_event, value) => callback(value))
     }
 );
