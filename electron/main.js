@@ -265,6 +265,10 @@ ipcMain.handle('save-api-key', async (event, config) => {
                 let providerArg = '';
                 if (item.provider === 'OpenAI') providerArg = '--openai-api-key';
                 else if (item.provider === 'Anthropic') providerArg = '--anthropic-api-key';
+                else if (item.provider === 'Anthropic Token') {
+                    args.push('--auth-choice', 'token', '--token-provider', 'anthropic', '--token', item.key.trim());
+                    continue;
+                }
                 else if (item.provider === 'Google Gemini') providerArg = '--gemini-api-key';
                 else if (item.provider === 'ByteDance Doubao') providerArg = '--volcengine-api-key';
                 else if (item.provider === 'xAI (Grok)') providerArg = '--xai-api-key';

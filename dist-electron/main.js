@@ -177,7 +177,10 @@ r.handle("setup-workspace", async (e, n) => {
 			let t = "";
 			if (e.provider === "OpenAI") t = "--openai-api-key";
 			else if (e.provider === "Anthropic") t = "--anthropic-api-key";
-			else if (e.provider === "Google Gemini") t = "--gemini-api-key";
+			else if (e.provider === "Anthropic Token") {
+				i.push("--auth-choice", "token", "--token-provider", "anthropic", "--token", e.key.trim());
+				continue;
+			} else if (e.provider === "Google Gemini") t = "--gemini-api-key";
 			else if (e.provider === "ByteDance Doubao") t = "--volcengine-api-key";
 			else if (e.provider === "xAI (Grok)") t = "--xai-api-key";
 			else if (e.provider === "Together AI") t = "--together-api-key";

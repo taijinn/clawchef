@@ -568,7 +568,7 @@ function renderApiKey() {
   }
 
   const providers = [
-    'OpenAI', 'OpenAI Codex', 'Anthropic', 'Google Gemini', 'Google Gemini OAuth', 'DeepSeek',
+    'OpenAI', 'OpenAI Codex', 'Anthropic', 'Anthropic Token', 'Google Gemini', 'Google Gemini OAuth', 'DeepSeek',
     'Moonshot AI', 'Qwen', 'More coming soon...'
   ];
 
@@ -585,7 +585,7 @@ function renderApiKey() {
           </select>
         </div>
         <div style="flex: 2;">
-          <label class="input-label" style="font-size: 0.75rem;">${item.provider === 'OpenAI Codex' || item.provider === 'Google Gemini OAuth' ? item.provider + ' Authorization' : 'Your Secret Key'}</label>
+          <label class="input-label" style="font-size: 0.75rem;">${item.provider === 'OpenAI Codex' || item.provider === 'Google Gemini OAuth' ? item.provider + ' Authorization' : (item.provider === 'Anthropic Token' ? 'Anthropic Setup Token' : 'Your Secret Key')}</label>
           ${item.provider === 'OpenAI Codex' || item.provider === 'Google Gemini OAuth' ? (
              item.key === 'linked' ? 
                `<div style="height: 48px; border: 1px solid var(--success-color); border-radius: var(--radius-md); background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center; color: var(--success-color); font-weight: 600;">✅ Account Linked</div>`
