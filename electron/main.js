@@ -256,17 +256,36 @@ ipcMain.handle('setup-workspace', async (event, workspacePathInput) => {
 });
 
 ipcMain.handle('save-api-key', async (event, config) => {
-    const workspacePath = config.workspacePath.replace('~', app.getPath('home'));
+    sendLog('> [SYSTEM] Applying API keys via direct filesystem credentials integration...');
     
-    sendLog('> [SYSTEM] Applying API keys via `openclaw onboard`...');
-    let args = ['onboard', '--non-interactive', '--accept-risk', '--skip-daemon', '--skip-channels', '--skip-search', '--skip-skills', '--skip-ui', '--skip-health', '--workspace', workspacePath];
-    
+    const writeCredential = async (providerId, key) => {
+        try {
+            const targetPath = path.join(app.getPath('home'), '.openclaw', 'credentials', `${providerId}.json`);
+            await fs.mkdir(path.dirname(targetPath), { recursive: true });
+            
+            const payload = {
+                type: 'api_key',
+                provider: providerId,
+                key: key
+            };
+            
+            await fs.writeFile(targetPath, JSON.stringify(payload, null, 2), { mode: 0o600 });
+            sendLog(`> [SYSTEM] Saved ${providerId} API Key successfully.`);
+        } catch (err) {
+            sendLog(`> [SYSTEM] [ERROR] Failed saving ${providerId} API Key: ${err.message}`);
+        }
+    };
+
     if (config.apiKeys && Array.isArray(config.apiKeys)) {
         for (const item of config.apiKeys) {
             if (item.key && item.key.trim() !== '') {
-                let providerArg = '';
-                if (item.provider === 'OpenAI') providerArg = '--openai-api-key';
-                else if (item.provider === 'Anthropic') providerArg = '--anthropic-api-key';
+                const key = item.key.trim();
+                if (item.provider === 'OpenAI') await writeCredential('openai', key);
+                else if (item.provider === 'Anthropic') await writeCredential('anthropic', key);
+                else if (item.provider === 'Google Gemini') await writeCredential('google-gemini', key);
+                else if (item.provider === 'DeepSeek') await writeCredential('deepseek', key);
+                else if (item.provider === 'Moonshot AI') await writeCredential('moonshot', key);
+                else if (item.provider === 'Qwen') await writeCredential('qwen', key);
                 else if (item.provider === 'Anthropic Token') {
                     try {
                         const targetPath = path.join(app.getPath('home'), '.openclaw', 'credentials', 'anthropic.json');
@@ -274,37 +293,22 @@ ipcMain.handle('save-api-key', async (event, config) => {
                         const payload = {
                             type: 'token',
                             provider: 'anthropic',
-                            token: item.key.trim()
+                            token: key
                         };
                         await fs.writeFile(targetPath, JSON.stringify(payload, null, 2), { mode: 0o600 });
                         sendLog('> [SYSTEM] Saved Anthropic Setup Token to credentials store natively.');
                     } catch (err) {
                         sendLog(`> [SYSTEM] [ERROR] Failed saving Anthropic Token to credentials: ${err.message}`);
                     }
-                    continue;
                 }
-                else if (item.provider === 'Google Gemini') providerArg = '--gemini-api-key';
-                else if (item.provider === 'ByteDance Doubao') providerArg = '--volcengine-api-key';
-                else if (item.provider === 'xAI (Grok)') providerArg = '--xai-api-key';
-                else if (item.provider === 'Together AI') providerArg = '--together-api-key';
-                else { continue; }
-                
-                args.push(providerArg, item.key.trim());
             }
         }
     } else if (config.apiKey) {
-        args.push('--openai-api-key', config.apiKey);
+        await writeCredential('openai', config.apiKey.trim());
     }
     
-    try {
-        sendLog(`> [EXEC] openclaw ${args.join(' ')}`);
-        await runCommandStreaming('openclaw', args, app.getPath('home'));
-        sendLog('> [SYSTEM] API Configuration applied successfully.');
-        return { success: true };
-    } catch (e) {
-        sendLog(`> [SYSTEM] [ERROR] Onboard config failed: ${e.message}`);
-        throw e;
-    }
+    sendLog('> [SYSTEM] API Configuration applied successfully.');
+    return { success: true };
 });
 
 ipcMain.handle('save-channels', async (event, config) => {

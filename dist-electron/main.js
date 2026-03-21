@@ -159,53 +159,45 @@ r.handle("setup-workspace", async (e, n) => {
 	}
 	return { success: !0 };
 }), r.handle("save-api-key", async (e, n) => {
-	let r = n.workspacePath.replace("~", t.getPath("home"));
-	x("> [SYSTEM] Applying API keys via `openclaw onboard`...");
-	let i = [
-		"onboard",
-		"--non-interactive",
-		"--accept-risk",
-		"--skip-daemon",
-		"--skip-channels",
-		"--skip-search",
-		"--skip-skills",
-		"--skip-ui",
-		"--skip-health",
-		"--workspace",
-		r
-	];
+	x("> [SYSTEM] Applying API keys via direct filesystem credentials integration...");
+	let r = async (e, n) => {
+		try {
+			let r = a.join(t.getPath("home"), ".openclaw", "credentials", `${e}.json`);
+			await u.mkdir(a.dirname(r), { recursive: !0 });
+			let i = {
+				type: "api_key",
+				provider: e,
+				key: n
+			};
+			await u.writeFile(r, JSON.stringify(i, null, 2), { mode: 384 }), x(`> [SYSTEM] Saved ${e} API Key successfully.`);
+		} catch (t) {
+			x(`> [SYSTEM] [ERROR] Failed saving ${e} API Key: ${t.message}`);
+		}
+	};
 	if (n.apiKeys && Array.isArray(n.apiKeys)) {
 		for (let e of n.apiKeys) if (e.key && e.key.trim() !== "") {
-			let n = "";
-			if (e.provider === "OpenAI") n = "--openai-api-key";
-			else if (e.provider === "Anthropic") n = "--anthropic-api-key";
-			else if (e.provider === "Anthropic Token") {
-				try {
-					let n = a.join(t.getPath("home"), ".openclaw", "credentials", "anthropic.json");
-					await u.mkdir(a.dirname(n), { recursive: !0 });
-					let r = {
-						type: "token",
-						provider: "anthropic",
-						token: e.key.trim()
-					};
-					await u.writeFile(n, JSON.stringify(r, null, 2), { mode: 384 }), x("> [SYSTEM] Saved Anthropic Setup Token to credentials store natively.");
-				} catch (e) {
-					x(`> [SYSTEM] [ERROR] Failed saving Anthropic Token to credentials: ${e.message}`);
-				}
-				continue;
-			} else if (e.provider === "Google Gemini") n = "--gemini-api-key";
-			else if (e.provider === "ByteDance Doubao") n = "--volcengine-api-key";
-			else if (e.provider === "xAI (Grok)") n = "--xai-api-key";
-			else if (e.provider === "Together AI") n = "--together-api-key";
-			else continue;
-			i.push(n, e.key.trim());
+			let n = e.key.trim();
+			if (e.provider === "OpenAI") await r("openai", n);
+			else if (e.provider === "Anthropic") await r("anthropic", n);
+			else if (e.provider === "Google Gemini") await r("google-gemini", n);
+			else if (e.provider === "DeepSeek") await r("deepseek", n);
+			else if (e.provider === "Moonshot AI") await r("moonshot", n);
+			else if (e.provider === "Qwen") await r("qwen", n);
+			else if (e.provider === "Anthropic Token") try {
+				let e = a.join(t.getPath("home"), ".openclaw", "credentials", "anthropic.json");
+				await u.mkdir(a.dirname(e), { recursive: !0 });
+				let r = {
+					type: "token",
+					provider: "anthropic",
+					token: n
+				};
+				await u.writeFile(e, JSON.stringify(r, null, 2), { mode: 384 }), x("> [SYSTEM] Saved Anthropic Setup Token to credentials store natively.");
+			} catch (e) {
+				x(`> [SYSTEM] [ERROR] Failed saving Anthropic Token to credentials: ${e.message}`);
+			}
 		}
-	} else n.apiKey && i.push("--openai-api-key", n.apiKey);
-	try {
-		return x(`> [EXEC] openclaw ${i.join(" ")}`), await C("openclaw", i, t.getPath("home")), x("> [SYSTEM] API Configuration applied successfully."), { success: !0 };
-	} catch (e) {
-		throw x(`> [SYSTEM] [ERROR] Onboard config failed: ${e.message}`), e;
-	}
+	} else n.apiKey && await r("openai", n.apiKey.trim());
+	return x("> [SYSTEM] API Configuration applied successfully."), { success: !0 };
 }), r.handle("save-channels", async (e, n) => {
 	if (x("> [SYSTEM] Configuring Channels via native CLI commands..."), n.channels && Array.isArray(n.channels)) for (let e of n.channels) {
 		let r = e.provider.toLowerCase();

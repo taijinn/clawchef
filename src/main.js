@@ -569,7 +569,7 @@ function renderApiKey() {
 
   const providers = [
     'OpenAI', 'OpenAI Codex', 'Anthropic', 'Anthropic Token', 'Google Gemini', 'Google Gemini OAuth', 'DeepSeek',
-    'Moonshot AI', 'Qwen', 'More coming soon...'
+    'Moonshot AI', 'Qwen'
   ];
 
   const renderRows = () => {
@@ -587,12 +587,12 @@ function renderApiKey() {
         <div style="flex: 2;">
           <label class="input-label" style="font-size: 0.75rem;">${item.provider === 'OpenAI Codex' || item.provider === 'Google Gemini OAuth' ? item.provider + ' Authorization' : (item.provider === 'Anthropic Token' ? 'Anthropic Setup Token' : 'Your Secret Key')}</label>
           ${item.provider === 'OpenAI Codex' || item.provider === 'Google Gemini OAuth' ? (
-             item.key === 'linked' ? 
-               `<div style="height: 48px; border: 1px solid var(--success-color); border-radius: var(--radius-md); background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center; color: var(--success-color); font-weight: 600;">✅ Account Linked</div>`
-               : item.scanning ? 
-               `<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(255,159,28,0.1); padding: 0.5rem; border: 1px dashed var(--accent-primary); border-radius: var(--radius-md); width: 100%; height: 48px; margin-top: 5px; color: var(--accent-primary); font-size: 0.85rem; font-weight: 500;"><div>👀 Complete login in browser</div></div>`
-               : `<button class="btn btn-secondary btn-login-oauth" data-provider="${item.provider}" data-id="${item.id}" style="width: 100%; height: 48px; border: 1px dashed var(--accent-primary); color: var(--text-primary);">Login via Browser</button>`
-          ) : `<input type="password" class="input-field key-input" data-id="${item.id}" placeholder="Enter Key..." value="${item.key}" />`}
+        item.key === 'linked' ?
+          `<div style="height: 48px; border: 1px solid var(--success-color); border-radius: var(--radius-md); background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center; color: var(--success-color); font-weight: 600;">✅ Account Linked</div>`
+          : item.scanning ?
+            `<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(255,159,28,0.1); padding: 0.5rem; border: 1px dashed var(--accent-primary); border-radius: var(--radius-md); width: 100%; height: 48px; margin-top: 5px; color: var(--accent-primary); font-size: 0.85rem; font-weight: 500;"><div>👀 Complete login in browser</div></div>`
+            : `<button class="btn btn-secondary btn-login-oauth" data-provider="${item.provider}" data-id="${item.id}" style="width: 100%; height: 48px; border: 1px dashed var(--accent-primary); color: var(--text-primary);">Login via Browser</button>`
+      ) : `<input type="password" class="input-field key-input" data-id="${item.id}" placeholder="Enter Key..." value="${item.key}" />`}
         </div>
         <button class="btn btn-secondary remove-key-btn" data-id="${item.id}" style="padding: 0.6rem 0.8rem; height: 40px; color: var(--error-color); border: 1px solid var(--error-color); background: transparent;" ${configData.apiKeys.length === 1 ? 'disabled' : ''}>✕</button>
       </div>
@@ -638,10 +638,10 @@ function renderApiKey() {
         renderRows();
 
         try {
-          const res = providerName === 'OpenAI Codex' 
-            ? await window.api.loginCodex() 
+          const res = providerName === 'OpenAI Codex'
+            ? await window.api.loginCodex()
             : await window.api.loginGemini();
-            
+
           if (res.success) {
             row.key = 'linked';
             row.scanning = false;
