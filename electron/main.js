@@ -1,9 +1,11 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { exec, spawn } from 'node:child_process';
 import util from 'node:util';
 import fs from 'node:fs/promises';
+import crypto from 'node:crypto';
+import http from 'node:http';
 
 const execAsync = util.promisify(exec);
 
@@ -389,20 +391,117 @@ ipcMain.handle('login-codex', async () => {
     }
 });
 
-ipcMain.handle('login-gemini', async () => {
-    sendLog('> [SYSTEM] Launching Google Gemini OAuth Login...');
+async function extractGeminiCliCredentials() {
     try {
-        const wrapperPath = path.join(app.getPath('home'), '.openclaw', 'gemini-login.mjs');
-        const wrapperCode = `Object.defineProperty(process.stdin, 'isTTY', {value: true}); Object.defineProperty(process.stdout, 'isTTY', {value: true}); process.argv.splice(1, 0, 'openclaw'); import('/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs');`;
-        await fs.mkdir(path.join(app.getPath('home'), '.openclaw'), { recursive: true });
-        await fs.writeFile(wrapperPath, wrapperCode, 'utf-8');
+        const geminiBin = (await execAsync('which gemini')).stdout.trim();
+        if (geminiBin) {
+            const realGeminiBin = (await execAsync(`realpath ${geminiBin}`)).stdout.trim();
+            const pkgBase = path.join(path.dirname(realGeminiBin), '..');
+            const oauth2JsPath = path.join(pkgBase, 'node_modules', '@google', 'gemini-cli-core', 'dist', 'src', 'code_assist', 'oauth2.js');
+            const data = await fs.readFile(oauth2JsPath, 'utf8');
+            const clientIdMatch = data.match(/OAUTH_CLIENT_ID\s*=\s*['"]([^'"]+)['"]/);
+            const clientSecretMatch = data.match(/OAUTH_CLIENT_SECRET\s*=\s*['"]([^'"]+)['"]/);
+            if (clientIdMatch && clientSecretMatch) {
+                return { clientId: clientIdMatch[1], clientSecret: clientSecretMatch[1] };
+            }
+        }
+    } catch(e) {}
+    
+    // Fallback identical to the official library constants
+    return {
+        clientId: '681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com',
+        clientSecret: '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'
+    };
+}
+
+ipcMain.handle('login-gemini', async () => {
+    sendLog('> [SYSTEM] Launching Native PKCE Google Gemini OAuth Login...');
+    try {
+        const creds = await extractGeminiCliCredentials();
+        const codeVerifier = crypto.randomBytes(32).toString('base64url');
+        const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+        const port = 8085;
+        const redirectUri = `http://127.0.0.1:${port}/oauth2callback`;
+        const state = crypto.randomBytes(32).toString('hex');
         
-        sendLog(`> [EXEC] openclaw models auth login --provider google-gemini-cli`);
-        await runCommandStreaming('node', [wrapperPath, '--', 'models', 'auth', 'login', '--provider', 'google-gemini-cli'], app.getPath('home'));
+        const scopes = [
+            'https://www.googleapis.com/auth/cloud-platform',
+            'https://www.googleapis.com/auth/userinfo.email',
+            'https://www.googleapis.com/auth/userinfo.profile'
+        ].join(' ');
         
-        // Clean up wrapper script and log success
-        await fs.rm(wrapperPath, { force: true }).catch(() => {});
-        sendLog('> [SYSTEM] Google Gemini OAuth Login Successful!');
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${creds.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&code_challenge=${codeChallenge}&code_challenge_method=S256&state=${state}&access_type=offline`;
+
+        const server = http.createServer();
+        
+        const loginPromise = new Promise((resolve, reject) => {
+            let timeout = setTimeout(() => {
+                server.close();
+                reject(new Error('OAuth timeout after 5 minutes'));
+            }, 300000);
+
+            server.on('request', async (req, res) => {
+                try {
+                    if (req.url.startsWith('/oauth2callback')) {
+                        const qs = new URL(req.url, `http://127.0.0.1:${port}`).searchParams;
+                        if (qs.get('error')) {
+                            res.writeHead(301, { Location: 'https://developers.google.com/gemini-code-assist/auth_failure_gemini' });
+                            res.end();
+                            reject(new Error(`OAuth error: ${qs.get('error')}`));
+                        } else if (qs.get('state') !== state) {
+                            res.writeHead(400); res.end('State mismatch');
+                            reject(new Error('State mismatch, possible CSRF'));
+                        } else if (qs.get('code')) {
+                            const code = qs.get('code');
+                            
+                            const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: new URLSearchParams({
+                                    code,
+                                    client_id: creds.clientId,
+                                    client_secret: creds.clientSecret,
+                                    redirect_uri: redirectUri,
+                                    grant_type: 'authorization_code',
+                                    code_verifier: codeVerifier
+                                })
+                            });
+                            
+                            if (!tokenRes.ok) throw new Error(await tokenRes.text());
+                            const tokens = await tokenRes.json();
+                            
+                            res.writeHead(301, { Location: 'https://developers.google.com/gemini-code-assist/auth_success_gemini' });
+                            res.end();
+                            
+                            const targetPath = path.join(app.getPath('home'), '.openclaw', 'credentials', 'google-gemini-cli.json');
+                            await fs.mkdir(path.dirname(targetPath), { recursive: true });
+                            await fs.writeFile(targetPath, JSON.stringify(tokens, null, 2), { mode: 0o600 });
+                            
+                            resolve(tokens);
+                        } else {
+                            res.writeHead(400); res.end('Missing code');
+                            reject(new Error('Missing authorization code'));
+                        }
+                    } else {
+                        res.writeHead(404); res.end();
+                    }
+                } catch(e) {
+                    reject(e);
+                } finally {
+                    clearTimeout(timeout);
+                    server.close();
+                }
+            });
+            server.on('error', reject);
+        });
+        
+        server.listen(port, '127.0.0.1', () => {
+            sendLog(`> [SYSTEM] Opening Browser to Google Consent Screen natively...`);
+            shell.openExternal(authUrl);
+        });
+        
+        await loginPromise;
+        sendLog('> [SYSTEM] Google Gemini OAuth Login Successful through PKCE Server!');
         return { success: true };
     } catch (error) {
         sendLog(`> [SYSTEM] [ERROR] Google Gemini Login failed: ${error.message}`);

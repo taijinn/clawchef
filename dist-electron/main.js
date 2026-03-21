@@ -1,58 +1,60 @@
-import { BrowserWindow as e, app as t, dialog as n, ipcMain as r } from "electron";
-import i from "node:path";
-import { fileURLToPath as a } from "node:url";
-import { exec as o, spawn as s } from "node:child_process";
-import c from "node:util";
-import l from "node:fs/promises";
+import { BrowserWindow as e, app as t, dialog as n, ipcMain as r, shell as i } from "electron";
+import a from "node:path";
+import { fileURLToPath as o } from "node:url";
+import { exec as s, spawn as c } from "node:child_process";
+import l from "node:util";
+import u from "node:fs/promises";
+import d from "node:crypto";
+import f from "node:http";
 //#region electron/main.js
-var u = c.promisify(o);
-async function d() {
+var p = l.promisify(s);
+async function m() {
 	if (process.platform === "darwin") try {
-		let { stdout: e } = await u(`"${process.env.SHELL || "/bin/zsh"}" -ilc 'echo -n "_SEPARATOR_"; env; echo -n "_SEPARATOR_"'`), t = e.split("_SEPARATOR_")[1].split("\n").find((e) => e.startsWith("PATH="));
+		let { stdout: e } = await p(`"${process.env.SHELL || "/bin/zsh"}" -ilc 'echo -n "_SEPARATOR_"; env; echo -n "_SEPARATOR_"'`), t = e.split("_SEPARATOR_")[1].split("\n").find((e) => e.startsWith("PATH="));
 		t && t.replace("PATH=", "").trim();
 	} catch (e) {
 		console.error("Could not fix PATH:", e);
 	}
 }
-process.env.PATH = `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || ""}`, d();
-var f = i.dirname(a(import.meta.url));
-process.env.APP_ROOT = i.join(f, "..");
-var p = process.env.VITE_DEV_SERVER_URL, m = i.join(process.env.APP_ROOT, "dist-electron"), h = i.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = p ? i.join(process.env.APP_ROOT, "public") : h;
-var g, _ = null;
-function v(e) {
-	console.log(e), g && g.webContents && g.webContents.send("debug-log", e);
+process.env.PATH = `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || ""}`, m();
+var h = a.dirname(o(import.meta.url));
+process.env.APP_ROOT = a.join(h, "..");
+var g = process.env.VITE_DEV_SERVER_URL, _ = a.join(process.env.APP_ROOT, "dist-electron"), v = a.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = g ? a.join(process.env.APP_ROOT, "public") : v;
+var y, b = null;
+function x(e) {
+	console.log(e), y && y.webContents && y.webContents.send("debug-log", e);
 }
-function y() {
-	g = new e({
+function S() {
+	y = new e({
 		width: 1e3,
 		height: 850,
 		titleBarStyle: "hiddenInset",
 		webPreferences: {
-			preload: i.join(f, "preload.mjs"),
+			preload: a.join(h, "preload.mjs"),
 			nodeIntegration: !1,
 			contextIsolation: !0
 		}
-	}), p ? g.loadURL(p) : g.loadFile(i.join(h, "index.html"));
+	}), g ? y.loadURL(g) : y.loadFile(a.join(v, "index.html"));
 }
-t.whenReady().then(y), t.on("window-all-closed", () => {
+t.whenReady().then(S), t.on("window-all-closed", () => {
 	process.platform !== "darwin" && t.quit();
 }), t.on("activate", () => {
-	e.getAllWindows().length === 0 && y();
+	e.getAllWindows().length === 0 && S();
 });
-function b(e, t, n) {
+function C(e, t, n) {
 	return new Promise((r, i) => {
-		e === "openclaw" ? (t = ["/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs", ...t], e = "/opt/homebrew/bin/node") : e === "brew" ? e = process.arch === "arm64" ? "/opt/homebrew/bin/brew" : "/usr/local/bin/brew" : e === "git" ? e = process.arch === "arm64" ? "/opt/homebrew/bin/git" : "/usr/bin/git" : e === "npm" && (e = process.arch === "arm64" ? "/opt/homebrew/bin/npm" : "/usr/local/bin/npm"), v(`> [EXEC] ${e} ${t.join(" ")}`);
-		let a = s(e, t, {
+		e === "openclaw" ? (t = ["/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs", ...t], e = "/opt/homebrew/bin/node") : e === "brew" ? e = process.arch === "arm64" ? "/opt/homebrew/bin/brew" : "/usr/local/bin/brew" : e === "git" ? e = process.arch === "arm64" ? "/opt/homebrew/bin/git" : "/usr/bin/git" : e === "npm" && (e = process.arch === "arm64" ? "/opt/homebrew/bin/npm" : "/usr/local/bin/npm"), x(`> [EXEC] ${e} ${t.join(" ")}`);
+		let a = c(e, t, {
 			cwd: n,
 			shell: !0
 		}), o = "";
 		a.stdout.on("data", (e) => {
 			let t = e.toString();
-			o += t, v(t.trim());
+			o += t, x(t.trim());
 		}), a.stderr.on("data", (e) => {
 			let t = e.toString();
-			o += t, v(t.trim());
+			o += t, x(t.trim());
 		}), a.on("close", (e) => {
 			if (e === 0) r();
 			else {
@@ -68,73 +70,73 @@ r.handle("check-prerequisites", async () => {
 		python: !1,
 		npm: !1
 	};
-	v("> [SYSTEM] Checking System Prerequisites...");
+	x("> [SYSTEM] Checking System Prerequisites...");
 	try {
-		v("> [EXEC] git --version");
-		let { stdout: t } = await u("git --version");
-		v(t.trim()), e.git = !0;
+		x("> [EXEC] git --version");
+		let { stdout: t } = await p("git --version");
+		x(t.trim()), e.git = !0;
 	} catch (e) {
-		v(`> [SYSTEM] [ERROR] Git not found: ${e.message}`);
+		x(`> [SYSTEM] [ERROR] Git not found: ${e.message}`);
 	}
 	try {
-		v("> [EXEC] python3 --version");
-		let { stdout: t } = await u("python3 --version");
-		v(t.trim()), e.python = !0;
+		x("> [EXEC] python3 --version");
+		let { stdout: t } = await p("python3 --version");
+		x(t.trim()), e.python = !0;
 	} catch (e) {
-		v(`> [SYSTEM] [ERROR] Python3 not found: ${e.message}`);
+		x(`> [SYSTEM] [ERROR] Python3 not found: ${e.message}`);
 	}
 	try {
-		v("> [EXEC] npm --version");
-		let { stdout: t } = await u("npm --version");
-		v(t.trim()), e.npm = !0;
+		x("> [EXEC] npm --version");
+		let { stdout: t } = await p("npm --version");
+		x(t.trim()), e.npm = !0;
 	} catch (e) {
-		v(`> [SYSTEM] [ERROR] NPM not found: ${e.message}`);
+		x(`> [SYSTEM] [ERROR] NPM not found: ${e.message}`);
 	}
 	return e;
 });
-async function x() {
+async function w() {
 	try {
-		return await u("brew --version"), v("> [SYSTEM] Homebrew is already installed."), !0;
+		return await p("brew --version"), x("> [SYSTEM] Homebrew is already installed."), !0;
 	} catch {
-		v("> [SYSTEM] Homebrew not found. Attempting installation...");
+		x("> [SYSTEM] Homebrew not found. Attempting installation...");
 		try {
-			v("> [SYSTEM] Checking/Installing Xcode Command Line Tools..."), v("> [EXEC] xcode-select --install"), await b("xcode-select", ["--install"], process.env.APP_ROOT);
+			x("> [SYSTEM] Checking/Installing Xcode Command Line Tools..."), x("> [EXEC] xcode-select --install"), await C("xcode-select", ["--install"], process.env.APP_ROOT);
 		} catch {
-			v("> [SYSTEM] Xcode Command Line Tools already installed or user prompted.");
+			x("> [SYSTEM] Xcode Command Line Tools already installed or user prompted.");
 		}
-		v("> [SYSTEM] Downloading and running Homebrew installer script...");
+		x("> [SYSTEM] Downloading and running Homebrew installer script...");
 		try {
-			return await b("bash", ["-c", "NONINTERACTIVE=1 /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""], t.getPath("home")), process.arch === "arm64" ? process.env.PATH = `/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH}` : process.env.PATH = `/usr/local/bin:/usr/local/sbin:${process.env.PATH}`, v("> [SYSTEM] Homebrew installation complete."), !0;
+			return await C("bash", ["-c", "NONINTERACTIVE=1 /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""], t.getPath("home")), process.arch === "arm64" ? process.env.PATH = `/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH}` : process.env.PATH = `/usr/local/bin:/usr/local/sbin:${process.env.PATH}`, x("> [SYSTEM] Homebrew installation complete."), !0;
 		} catch (e) {
-			throw v(`> [SYSTEM] [ERROR] Failed to install Homebrew automatically: ${e.message}`), e;
+			throw x(`> [SYSTEM] [ERROR] Failed to install Homebrew automatically: ${e.message}`), e;
 		}
 	}
 }
 r.handle("install-dependency", async (e, n) => {
-	v(`> [SYSTEM] Requested auto-installation for missing dependency: ${n}`);
+	x(`> [SYSTEM] Requested auto-installation for missing dependency: ${n}`);
 	try {
-		await x();
+		await w();
 		let e = "", r = "";
 		if (n === "git") e = "git", r = "git --version";
 		else if (n === "python") e = "python", r = "python3 --version";
 		else if (n === "npm") e = "node", r = "npm --version";
 		else throw Error("Unknown dependency requested");
-		v(`> [SYSTEM] Installing ${e} via Homebrew...`), await b("brew", ["install", e], t.getPath("home")), v(`> [SYSTEM] Verifying installation of ${n}...`), v(`> [EXEC] ${r}`);
-		let { stdout: i } = await u(r);
-		return v(i.trim()), v(`> [SYSTEM] ${n} installed successfully!`), { success: !0 };
+		x(`> [SYSTEM] Installing ${e} via Homebrew...`), await C("brew", ["install", e], t.getPath("home")), x(`> [SYSTEM] Verifying installation of ${n}...`), x(`> [EXEC] ${r}`);
+		let { stdout: i } = await p(r);
+		return x(i.trim()), x(`> [SYSTEM] ${n} installed successfully!`), { success: !0 };
 	} catch (e) {
-		return v(`> [SYSTEM] [ERROR] Installation pipeline failed: ${e.message}`), {
+		return x(`> [SYSTEM] [ERROR] Installation pipeline failed: ${e.message}`), {
 			success: !1,
 			error: e.message
 		};
 	}
 });
-var S = null, C = null;
+var T = null, E = null;
 r.handle("setup-workspace", async (e, n) => {
 	let r = n.replace("~", t.getPath("home"));
-	v(`> [SYSTEM] Setting up workspace at: ${r}`);
+	x(`> [SYSTEM] Setting up workspace at: ${r}`);
 	try {
-		v(`> [EXEC] openclaw onboard --workspace "${r}" --non-interactive --accept-risk`), await b("openclaw", [
+		x(`> [EXEC] openclaw onboard --workspace "${r}" --non-interactive --accept-risk`), await C("openclaw", [
 			"onboard",
 			"--workspace",
 			r,
@@ -146,19 +148,19 @@ r.handle("setup-workspace", async (e, n) => {
 			"--skip-skills",
 			"--skip-ui",
 			"--skip-health"
-		], t.getPath("home")), v(`> [EXEC] openclaw config set gateway.bind lan (cwd: ${r})`), await b("openclaw", [
+		], t.getPath("home")), x(`> [EXEC] openclaw config set gateway.bind lan (cwd: ${r})`), await C("openclaw", [
 			"config",
 			"set",
 			"gateway.bind",
 			"lan"
-		], r), v("> [SYSTEM] Workspace setup complete.");
+		], r), x("> [SYSTEM] Workspace setup complete.");
 	} catch (e) {
-		throw v(`> [SYSTEM] [ERROR] Setup failed: ${e.message}`), e;
+		throw x(`> [SYSTEM] [ERROR] Setup failed: ${e.message}`), e;
 	}
 	return { success: !0 };
 }), r.handle("save-api-key", async (e, n) => {
 	let r = n.workspacePath.replace("~", t.getPath("home"));
-	v("> [SYSTEM] Applying API keys via `openclaw onboard`...");
+	x("> [SYSTEM] Applying API keys via `openclaw onboard`...");
 	let i = [
 		"onboard",
 		"--non-interactive",
@@ -189,42 +191,42 @@ r.handle("setup-workspace", async (e, n) => {
 		}
 	} else n.apiKey && i.push("--openai-api-key", n.apiKey);
 	try {
-		return v(`> [EXEC] openclaw ${i.join(" ")}`), await b("openclaw", i, t.getPath("home")), v("> [SYSTEM] API Configuration applied successfully."), { success: !0 };
+		return x(`> [EXEC] openclaw ${i.join(" ")}`), await C("openclaw", i, t.getPath("home")), x("> [SYSTEM] API Configuration applied successfully."), { success: !0 };
 	} catch (e) {
-		throw v(`> [SYSTEM] [ERROR] Onboard config failed: ${e.message}`), e;
+		throw x(`> [SYSTEM] [ERROR] Onboard config failed: ${e.message}`), e;
 	}
 }), r.handle("save-channels", async (e, n) => {
-	if (v("> [SYSTEM] Configuring Channels via native CLI commands..."), n.channels && Array.isArray(n.channels)) for (let e of n.channels) {
+	if (x("> [SYSTEM] Configuring Channels via native CLI commands..."), n.channels && Array.isArray(n.channels)) for (let e of n.channels) {
 		let r = e.provider.toLowerCase();
 		if (r.includes("lark")) {
 			let r = "feishu";
 			try {
 				try {
-					v("> [EXEC] openclaw plugins install @openclaw/feishu"), await b("openclaw", [
+					x("> [EXEC] openclaw plugins install @openclaw/feishu"), await C("openclaw", [
 						"plugins",
 						"install",
 						"@openclaw/feishu"
 					], t.getPath("home"));
 				} catch (e) {
-					v(`> [SYSTEM] Feishu plugin already installed or failed to install: ${e.message}`);
+					x(`> [SYSTEM] Feishu plugin already installed or failed to install: ${e.message}`);
 				}
-				let a = n.workspacePath.replace("~", t.getPath("home"));
-				v(`> [EXEC] openclaw config set channels.${r}.enabled true`), await b("openclaw", [
+				let i = n.workspacePath.replace("~", t.getPath("home"));
+				x(`> [EXEC] openclaw config set channels.${r}.enabled true`), await C("openclaw", [
 					"config",
 					"set",
 					`channels.${r}.enabled`,
 					"true"
-				], a), v("> [SYSTEM] Bypassing CLI to write Feishu credentials directly to openclaw.json...");
-				let o = i.join(t.getPath("home"), ".openclaw", "openclaw.json");
+				], i), x("> [SYSTEM] Bypassing CLI to write Feishu credentials directly to openclaw.json...");
+				let o = a.join(t.getPath("home"), ".openclaw", "openclaw.json");
 				try {
-					await l.access(o);
-					let t = await l.readFile(o, "utf8"), n = JSON.parse(t);
-					n.channels ||= {}, n.channels[r] || (n.channels[r] = { enabled: !0 }), n.channels[r].accounts || (n.channels[r].accounts = {}), n.channels[r].accounts[r] || (n.channels[r].accounts[r] = { enabled: !0 }), e.appId && (n.channels[r].accounts[r].appId = e.appId.trim()), e.appSecret && (n.channels[r].accounts[r].appSecret = e.appSecret.trim()), e.encryptKey && (n.channels[r].accounts[r].encryptKey = e.encryptKey.trim()), e.verificationToken && (n.channels[r].accounts[r].verificationToken = e.verificationToken.trim()), e.domain && (n.channels[r].accounts[r].domain = e.domain.trim()), e.dmPolicy && (n.channels[r].accounts[r].dmPolicy = e.dmPolicy.trim()), await l.writeFile(o, JSON.stringify(n, null, 2)), v("> [SYSTEM] Feishu credentials written directly to openclaw.json.");
+					await u.access(o);
+					let t = await u.readFile(o, "utf8"), n = JSON.parse(t);
+					n.channels ||= {}, n.channels[r] || (n.channels[r] = { enabled: !0 }), n.channels[r].accounts || (n.channels[r].accounts = {}), n.channels[r].accounts[r] || (n.channels[r].accounts[r] = { enabled: !0 }), e.appId && (n.channels[r].accounts[r].appId = e.appId.trim()), e.appSecret && (n.channels[r].accounts[r].appSecret = e.appSecret.trim()), e.encryptKey && (n.channels[r].accounts[r].encryptKey = e.encryptKey.trim()), e.verificationToken && (n.channels[r].accounts[r].verificationToken = e.verificationToken.trim()), e.domain && (n.channels[r].accounts[r].domain = e.domain.trim()), e.dmPolicy && (n.channels[r].accounts[r].dmPolicy = e.dmPolicy.trim()), await u.writeFile(o, JSON.stringify(n, null, 2)), x("> [SYSTEM] Feishu credentials written directly to openclaw.json.");
 				} catch (e) {
-					v(`> [SYSTEM] openclaw.json not found or unreadable: ${e.message}`);
+					x(`> [SYSTEM] openclaw.json not found or unreadable: ${e.message}`);
 				}
 			} catch (e) {
-				v(`> [SYSTEM] [ERROR] Failed to add Lark channel: ${e.message}`);
+				x(`> [SYSTEM] [ERROR] Failed to add Lark channel: ${e.message}`);
 			}
 			continue;
 		}
@@ -241,23 +243,23 @@ r.handle("setup-workspace", async (e, n) => {
 			];
 			try {
 				let e = n.workspacePath.replace("~", t.getPath("home"));
-				v(`> [EXEC] openclaw config set channels.${r}.enabled true`), await b("openclaw", [
+				x(`> [EXEC] openclaw config set channels.${r}.enabled true`), await C("openclaw", [
 					"config",
 					"set",
 					`channels.${r}.enabled`,
 					"true"
-				], e), v(`> [EXEC] openclaw ${a.join(" ")}`), await b("openclaw", a, e);
+				], e), x(`> [EXEC] openclaw ${a.join(" ")}`), await C("openclaw", a, e);
 			} catch (e) {
-				v(`> [SYSTEM] [ERROR] Failed to add channel ${r}: ${e.message}`);
+				x(`> [SYSTEM] [ERROR] Failed to add channel ${r}: ${e.message}`);
 			}
 		}
 	}
-	return v("> [SYSTEM] Channel setup sequence finished."), { success: !0 };
+	return x("> [SYSTEM] Channel setup sequence finished."), { success: !0 };
 }), r.handle("login-codex", async () => {
-	v("> [SYSTEM] Launching OpenAI Codex OAuth Login...");
+	x("> [SYSTEM] Launching OpenAI Codex OAuth Login...");
 	try {
-		let e = i.join(t.getPath("home"), ".openclaw", "codex-login.mjs");
-		return await l.mkdir(i.join(t.getPath("home"), ".openclaw"), { recursive: !0 }), await l.writeFile(e, "Object.defineProperty(process.stdin, 'isTTY', {value: true}); Object.defineProperty(process.stdout, 'isTTY', {value: true}); process.argv.splice(1, 0, 'openclaw'); import('/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs');", "utf-8"), v("> [EXEC] openclaw models auth login --provider openai-codex"), await b("node", [
+		let e = a.join(t.getPath("home"), ".openclaw", "codex-login.mjs");
+		return await u.mkdir(a.join(t.getPath("home"), ".openclaw"), { recursive: !0 }), await u.writeFile(e, "Object.defineProperty(process.stdin, 'isTTY', {value: true}); Object.defineProperty(process.stdout, 'isTTY', {value: true}); process.argv.splice(1, 0, 'openclaw'); import('/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs');", "utf-8"), x("> [EXEC] openclaw models auth login --provider openai-codex"), await C("node", [
 			e,
 			"--",
 			"models",
@@ -265,58 +267,109 @@ r.handle("setup-workspace", async (e, n) => {
 			"login",
 			"--provider",
 			"openai-codex"
-		], t.getPath("home")), await l.rm(e, { force: !0 }).catch(() => {}), v("> [SYSTEM] OpenAI Codex OAuth Login Successful!"), { success: !0 };
+		], t.getPath("home")), await u.rm(e, { force: !0 }).catch(() => {}), x("> [SYSTEM] OpenAI Codex OAuth Login Successful!"), { success: !0 };
 	} catch (e) {
-		return v(`> [SYSTEM] [ERROR] OpenAI Codex Login failed: ${e.message}`), {
+		return x(`> [SYSTEM] [ERROR] OpenAI Codex Login failed: ${e.message}`), {
 			success: !1,
 			error: e.message
 		};
 	}
-}), r.handle("login-gemini", async () => {
-	v("> [SYSTEM] Launching Google Gemini OAuth Login...");
+});
+async function D() {
 	try {
-		let e = i.join(t.getPath("home"), ".openclaw", "gemini-login.mjs");
-		return await l.mkdir(i.join(t.getPath("home"), ".openclaw"), { recursive: !0 }), await l.writeFile(e, "Object.defineProperty(process.stdin, 'isTTY', {value: true}); Object.defineProperty(process.stdout, 'isTTY', {value: true}); process.argv.splice(1, 0, 'openclaw'); import('/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs');", "utf-8"), v("> [EXEC] openclaw models auth login --provider google-gemini-cli"), await b("node", [
-			e,
-			"--",
-			"models",
-			"auth",
-			"login",
-			"--provider",
-			"google-gemini-cli"
-		], t.getPath("home")), await l.rm(e, { force: !0 }).catch(() => {}), v("> [SYSTEM] Google Gemini OAuth Login Successful!"), { success: !0 };
+		let e = (await p("which gemini")).stdout.trim();
+		if (e) {
+			let t = (await p(`realpath ${e}`)).stdout.trim(), n = a.join(a.dirname(t), ".."), r = a.join(n, "node_modules", "@google", "gemini-cli-core", "dist", "src", "code_assist", "oauth2.js"), i = await u.readFile(r, "utf8"), o = i.match(/OAUTH_CLIENT_ID\s*=\s*['"]([^'"]+)['"]/), s = i.match(/OAUTH_CLIENT_SECRET\s*=\s*['"]([^'"]+)['"]/);
+			if (o && s) return {
+				clientId: o[1],
+				clientSecret: s[1]
+			};
+		}
+	} catch {}
+	return {
+		clientId: "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com",
+		clientSecret: "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"
+	};
+}
+r.handle("login-gemini", async () => {
+	x("> [SYSTEM] Launching Native PKCE Google Gemini OAuth Login...");
+	try {
+		let e = await D(), n = d.randomBytes(32).toString("base64url"), r = d.createHash("sha256").update(n).digest("base64url"), o = 8085, s = `http://127.0.0.1:${o}/oauth2callback`, c = d.randomBytes(32).toString("hex"), l = [
+			"https://www.googleapis.com/auth/cloud-platform",
+			"https://www.googleapis.com/auth/userinfo.email",
+			"https://www.googleapis.com/auth/userinfo.profile"
+		].join(" "), p = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${e.clientId}&redirect_uri=${encodeURIComponent(s)}&response_type=code&scope=${encodeURIComponent(l)}&code_challenge=${r}&code_challenge_method=S256&state=${c}&access_type=offline`, m = f.createServer(), h = new Promise((r, i) => {
+			let l = setTimeout(() => {
+				m.close(), i(/* @__PURE__ */ Error("OAuth timeout after 5 minutes"));
+			}, 3e5);
+			m.on("request", async (d, f) => {
+				try {
+					if (d.url.startsWith("/oauth2callback")) {
+						let l = new URL(d.url, `http://127.0.0.1:${o}`).searchParams;
+						if (l.get("error")) f.writeHead(301, { Location: "https://developers.google.com/gemini-code-assist/auth_failure_gemini" }), f.end(), i(/* @__PURE__ */ Error(`OAuth error: ${l.get("error")}`));
+						else if (l.get("state") !== c) f.writeHead(400), f.end("State mismatch"), i(/* @__PURE__ */ Error("State mismatch, possible CSRF"));
+						else if (l.get("code")) {
+							let i = l.get("code"), o = await fetch("https://oauth2.googleapis.com/token", {
+								method: "POST",
+								headers: { "Content-Type": "application/x-www-form-urlencoded" },
+								body: new URLSearchParams({
+									code: i,
+									client_id: e.clientId,
+									client_secret: e.clientSecret,
+									redirect_uri: s,
+									grant_type: "authorization_code",
+									code_verifier: n
+								})
+							});
+							if (!o.ok) throw Error(await o.text());
+							let c = await o.json();
+							f.writeHead(301, { Location: "https://developers.google.com/gemini-code-assist/auth_success_gemini" }), f.end();
+							let d = a.join(t.getPath("home"), ".openclaw", "credentials", "google-gemini-cli.json");
+							await u.mkdir(a.dirname(d), { recursive: !0 }), await u.writeFile(d, JSON.stringify(c, null, 2), { mode: 384 }), r(c);
+						} else f.writeHead(400), f.end("Missing code"), i(/* @__PURE__ */ Error("Missing authorization code"));
+					} else f.writeHead(404), f.end();
+				} catch (e) {
+					i(e);
+				} finally {
+					clearTimeout(l), m.close();
+				}
+			}), m.on("error", i);
+		});
+		return m.listen(o, "127.0.0.1", () => {
+			x("> [SYSTEM] Opening Browser to Google Consent Screen natively..."), i.openExternal(p);
+		}), await h, x("> [SYSTEM] Google Gemini OAuth Login Successful through PKCE Server!"), { success: !0 };
 	} catch (e) {
-		return v(`> [SYSTEM] [ERROR] Google Gemini Login failed: ${e.message}`), {
+		return x(`> [SYSTEM] [ERROR] Google Gemini Login failed: ${e.message}`), {
 			success: !1,
 			error: e.message
 		};
 	}
 }), r.handle("generate-whatsapp-qr", async (e, n) => {
-	v("> [SYSTEM] Launching native WhatsApp Web Linker..."), v("> [SYSTEM] Look at the Debug Log below to scan the Terminal ASCII QR Code.");
+	x("> [SYSTEM] Launching native WhatsApp Web Linker..."), x("> [SYSTEM] Look at the Debug Log below to scan the Terminal ASCII QR Code.");
 	try {
 		let e = n.replace("~", t.getPath("home"));
-		return v("> [EXEC] openclaw config set channels.whatsapp.enabled true"), await b("openclaw", [
+		return x("> [EXEC] openclaw config set channels.whatsapp.enabled true"), await C("openclaw", [
 			"config",
 			"set",
 			"channels.whatsapp.enabled",
 			"true"
-		], e), v(`> [EXEC] openclaw channels login --channel whatsapp (cwd: ${e})`), await b("openclaw", [
+		], e), x(`> [EXEC] openclaw channels login --channel whatsapp (cwd: ${e})`), await C("openclaw", [
 			"channels",
 			"login",
 			"--channel",
 			"whatsapp"
-		], e), v("> [SYSTEM] WhatsApp Session Linked Successfully!"), {
+		], e), x("> [SYSTEM] WhatsApp Session Linked Successfully!"), {
 			success: !0,
 			qrDataUrl: null
 		};
 	} catch (e) {
-		return v(`> [SYSTEM] [ERROR] WhatsApp QR Generation failed: ${e.message}`), {
+		return x(`> [SYSTEM] [ERROR] WhatsApp QR Generation failed: ${e.message}`), {
 			success: !1,
 			error: e.message
 		};
 	}
 }), r.handle("test-message", async (e, n, r, i, a) => {
-	v(`> [SYSTEM] Initiating Test Message dispatch to ${i} via ${r}...`);
+	x(`> [SYSTEM] Initiating Test Message dispatch to ${i} via ${r}...`);
 	try {
 		let e = n.replace("~", t.getPath("home")), o = i;
 		if (r === "telegram" && o.startsWith("@")) {
@@ -344,15 +397,15 @@ r.handle("setup-workspace", async (e, n) => {
 			o,
 			"-m",
 			a
-		]), v(`> [EXEC] openclaw ${s.join(" ")} (cwd: ${e})`), await b("openclaw", s, e), v("> [SYSTEM] Test Message dispatched successfully."), { success: !0 };
+		]), x(`> [EXEC] openclaw ${s.join(" ")} (cwd: ${e})`), await C("openclaw", s, e), x("> [SYSTEM] Test Message dispatched successfully."), { success: !0 };
 	} catch (e) {
-		return v(`> [SYSTEM] [ERROR] Message dispatch failed: ${e.message}`), {
+		return x(`> [SYSTEM] [ERROR] Message dispatch failed: ${e.message}`), {
 			success: !1,
 			error: e.message
 		};
 	}
 }), r.handle("approve-pairing", async (e, n, r, i) => {
-	v(`> [SYSTEM] Initiating Pairing Approval for ${r} with code ${i}...`);
+	x(`> [SYSTEM] Initiating Pairing Approval for ${r} with code ${i}...`);
 	try {
 		let e = n.replace("~", t.getPath("home")), a = [
 			"pairing",
@@ -360,105 +413,105 @@ r.handle("setup-workspace", async (e, n) => {
 			r,
 			i
 		];
-		return v(`> [EXEC] openclaw ${a.join(" ")} (cwd: ${e})`), await b("openclaw", a, e), v("> [SYSTEM] Pairing approved successfully."), { success: !0 };
+		return x(`> [EXEC] openclaw ${a.join(" ")} (cwd: ${e})`), await C("openclaw", a, e), x("> [SYSTEM] Pairing approved successfully."), { success: !0 };
 	} catch (e) {
-		return v(`> [SYSTEM] [ERROR] Pairing approval failed: ${e.message}`), {
+		return x(`> [SYSTEM] [ERROR] Pairing approval failed: ${e.message}`), {
 			success: !1,
 			error: e.message
 		};
 	}
 }), r.handle("start-claw", async (n, r) => {
-	if (S) return v("> [SYSTEM] OpenClaw is already running."), { success: !0 };
-	let a = r.workspacePath.replace("~", t.getPath("home"));
-	C = a, v("> [SYSTEM] Requesting daemon installation configuration...");
+	if (T) return x("> [SYSTEM] OpenClaw is already running."), { success: !0 };
+	let i = r.workspacePath.replace("~", t.getPath("home"));
+	E = i, x("> [SYSTEM] Requesting daemon installation configuration...");
 	let o = [
 		"onboard",
 		"--install-daemon",
 		"--non-interactive",
 		"--accept-risk",
 		"--workspace",
-		a
+		i
 	];
 	try {
-		v(`> [EXEC] openclaw ${o.join(" ")}`), await b("openclaw", o, t.getPath("home")), v("> [SYSTEM] Waiting 3 seconds for daemon to initialize its web server..."), await new Promise((e) => setTimeout(e, 3e3)), S = !0, v("> [SYSTEM] Fetching Manager Dashboard URL...");
+		x(`> [EXEC] openclaw ${o.join(" ")}`), await C("openclaw", o, t.getPath("home")), x("> [SYSTEM] Waiting 3 seconds for daemon to initialize its web server..."), await new Promise((e) => setTimeout(e, 3e3)), T = !0, x("> [SYSTEM] Fetching Manager Dashboard URL...");
 		try {
-			let { stdout: n } = await u("/opt/homebrew/bin/node /opt/homebrew/lib/node_modules/openclaw/openclaw.mjs dashboard --no-open", { cwd: t.getPath("home") }), a = n.match(/Dashboard URL:\s*(https?:\/\/[^\s]+)/);
-			if (a && a[1]) {
-				let t = a[1];
-				v(`> [SYSTEM] Opening Manager at: ${t}`), _ = new e({
+			let { stdout: n } = await p("/opt/homebrew/bin/node /opt/homebrew/lib/node_modules/openclaw/openclaw.mjs dashboard --no-open", { cwd: t.getPath("home") }), i = n.match(/Dashboard URL:\s*(https?:\/\/[^\s]+)/);
+			if (i && i[1]) {
+				let t = i[1];
+				x(`> [SYSTEM] Opening Manager at: ${t}`), b = new e({
 					width: 1200,
 					height: 800,
 					title: "OpenClaw Manager",
 					webPreferences: {
 						nodeIntegration: !1,
 						contextIsolation: !0,
-						preload: i.join(f, "preload.mjs")
+						preload: a.join(h, "preload.mjs")
 					}
-				}), _.loadURL(t);
+				}), b.loadURL(t);
 				let n = !1;
-				_.webContents.on("did-finish-load", async () => {
-					!n && r.lang && (n = !0, await _.webContents.executeJavaScript(`try { localStorage.setItem('openclaw.i18n.locale', '${r.lang}'); } catch(e) {}`), _.webContents.reload());
-				}), _.on("closed", () => {
-					_ = null;
+				b.webContents.on("did-finish-load", async () => {
+					!n && r.lang && (n = !0, await b.webContents.executeJavaScript(`try { localStorage.setItem('openclaw.i18n.locale', '${r.lang}'); } catch(e) {}`), b.webContents.reload());
+				}), b.on("closed", () => {
+					b = null;
 				});
-			} else v("> [SYSTEM] Could not parse Dashboard URL from stdout.");
+			} else x("> [SYSTEM] Could not parse Dashboard URL from stdout.");
 		} catch (e) {
-			v(`> [SYSTEM] Failed to load dashboard: ${e.message}`);
+			x(`> [SYSTEM] Failed to load dashboard: ${e.message}`);
 		}
 		return { success: !0 };
 	} catch (e) {
-		return v(`> [SYSTEM] [ERROR] Failed to start OpenClaw daemon: ${e.message}`), {
+		return x(`> [SYSTEM] [ERROR] Failed to start OpenClaw daemon: ${e.message}`), {
 			success: !1,
 			error: e.message
 		};
 	}
 }), r.handle("stop-claw", async () => {
-	if (v("> [SYSTEM] Stop button pressed. Sending kill signal to active process."), S) {
-		v("> [EXEC] openclaw daemon stop");
+	if (x("> [SYSTEM] Stop button pressed. Sending kill signal to active process."), T) {
+		x("> [EXEC] openclaw daemon stop");
 		try {
-			await b("openclaw", ["daemon", "stop"], t.getPath("home"));
+			await C("openclaw", ["daemon", "stop"], t.getPath("home"));
 		} catch (e) {
-			v(`> [SYSTEM] (daemon stop returned error: ${e.message})`), v("> [EXEC] pkill -f \"node.*openclaw\""), await u("pkill -f \"node.*openclaw\"").catch(() => {});
+			x(`> [SYSTEM] (daemon stop returned error: ${e.message})`), x("> [EXEC] pkill -f \"node.*openclaw\""), await p("pkill -f \"node.*openclaw\"").catch(() => {});
 		}
-		return S = null, _ &&= (_.close(), null), v("> [SYSTEM] Active OpenClaw process terminated gracefully."), { success: !0 };
+		return T = null, b &&= (b.close(), null), x("> [SYSTEM] Active OpenClaw process terminated gracefully."), { success: !0 };
 	}
-	return v("> [SYSTEM] No active process found to stop."), {
+	return x("> [SYSTEM] No active process found to stop."), {
 		success: !1,
 		message: "OpenClaw is not currently running."
 	};
 }), r.handle("kill-all-tasks", async () => {
-	v("> [SYSTEM] WARNING: Kill All Tasks initiated.");
+	x("> [SYSTEM] WARNING: Kill All Tasks initiated.");
 	try {
-		v("> [EXEC] pkill -f \"python3.*openclaw\"");
+		x("> [EXEC] pkill -f \"python3.*openclaw\"");
 		try {
-			let { stdout: e, stderr: t } = await u("pkill -f \"python3.*openclaw\"");
-			e && v(e.trim()), t && v(t.trim());
+			let { stdout: e, stderr: t } = await p("pkill -f \"python3.*openclaw\"");
+			e && x(e.trim()), t && x(t.trim());
 		} catch (e) {
-			v(`> [SYSTEM] (pkill returned error, likely no tasks found tracking openclaw string: ${e.message})`);
+			x(`> [SYSTEM] (pkill returned error, likely no tasks found tracking openclaw string: ${e.message})`);
 		}
-		v("> [EXEC] pkill -f \"node.*openclaw\"");
+		x("> [EXEC] pkill -f \"node.*openclaw\"");
 		try {
-			await u("pkill -f \"node.*openclaw\"");
+			await p("pkill -f \"node.*openclaw\"");
 		} catch {}
-		return S &&= (v("> [SYSTEM] Nullifying internal process tracking handle."), null), _ &&= (_.close(), null), v("> [SYSTEM] Purge complete."), { success: !0 };
+		return T &&= (x("> [SYSTEM] Nullifying internal process tracking handle."), null), b &&= (b.close(), null), x("> [SYSTEM] Purge complete."), { success: !0 };
 	} catch (e) {
-		return v(`> [SYSTEM] [ERROR] Kill task sequence failed: ${e.message}`), {
+		return x(`> [SYSTEM] [ERROR] Kill task sequence failed: ${e.message}`), {
 			success: !1,
 			error: e.message
 		};
 	}
-}), r.handle("uninstall-claw", async (r, a) => {
-	v("> [SYSTEM] Uninstall sequence initiated.");
+}), r.handle("uninstall-claw", async (r, i) => {
+	x("> [SYSTEM] Uninstall sequence initiated.");
 	try {
-		let r = (a || C || "").replace("~", t.getPath("home")), o = i.join(r, "openclaw"), s = i.join(t.getPath("home"), ".openclaw");
-		if (S) {
-			v("> [SYSTEM] Stopping active daemon before directory removal...");
+		let r = (i || E || "").replace("~", t.getPath("home")), o = a.join(r, "openclaw"), s = a.join(t.getPath("home"), ".openclaw");
+		if (T) {
+			x("> [SYSTEM] Stopping active daemon before directory removal...");
 			try {
-				await b("openclaw", ["daemon", "stop"], t.getPath("home"));
+				await C("openclaw", ["daemon", "stop"], t.getPath("home"));
 			} catch {}
-			await u("pkill -f \"node.*openclaw\"").catch(() => {}), await u("pkill -f \"python3.*openclaw\"").catch(() => {}), S = null;
+			await p("pkill -f \"node.*openclaw\"").catch(() => {}), await p("pkill -f \"python3.*openclaw\"").catch(() => {}), T = null;
 		}
-		_ &&= (_.close(), null);
+		b &&= (b.close(), null);
 		let c = [
 			{
 				path: o,
@@ -476,10 +529,10 @@ r.handle("setup-workspace", async (e, n) => {
 				path: "/usr/local/bin/openclaw",
 				name: "Intel Mac Executable (/usr/local/bin)"
 			}
-		], d = !1, f = e.getFocusedWindow() || g;
+		], l = !1, d = e.getFocusedWindow() || y;
 		for (let e of c) try {
-			await l.stat(e.path);
-			let { response: t } = await n.showMessageBox(f, {
+			await u.stat(e.path);
+			let { response: t } = await n.showMessageBox(d, {
 				type: "warning",
 				title: "Approve Deletion",
 				message: `Do you want to permanently delete the following path?\n\n${e.name}\n${e.path}`,
@@ -487,20 +540,20 @@ r.handle("setup-workspace", async (e, n) => {
 				defaultId: 1,
 				cancelId: 1
 			});
-			t === 0 ? (v(`> [SYSTEM] User APPROVED deletion of ${e.path}`), v(`> [EXEC] rm -rf ${e.path}`), await l.rm(e.path, {
+			t === 0 ? (x(`> [SYSTEM] User APPROVED deletion of ${e.path}`), x(`> [EXEC] rm -rf ${e.path}`), await u.rm(e.path, {
 				recursive: !0,
 				force: !0
-			}), v(`> [SYSTEM] ${e.name} successfully deleted.`), d = !0) : v(`> [SYSTEM] User SKIPPED deletion of ${e.path}`);
+			}), x(`> [SYSTEM] ${e.name} successfully deleted.`), l = !0) : x(`> [SYSTEM] User SKIPPED deletion of ${e.path}`);
 		} catch (t) {
-			t.code === "ENOENT" ? v(`> [SYSTEM] Path not found on system: ${e.path}. Skipping.`) : v(`> [SYSTEM] [ERROR] Failed to access ${e.path}: ${t.message}`);
+			t.code === "ENOENT" ? x(`> [SYSTEM] Path not found on system: ${e.path}. Skipping.`) : x(`> [SYSTEM] [ERROR] Failed to access ${e.path}: ${t.message}`);
 		}
-		return v(d ? "> [SYSTEM] Uninstall sequence completed successfully." : "> [SYSTEM] Uninstall sequence completed. No files were removed."), { success: !0 };
+		return x(l ? "> [SYSTEM] Uninstall sequence completed successfully." : "> [SYSTEM] Uninstall sequence completed. No files were removed."), { success: !0 };
 	} catch (e) {
-		return v(`> [SYSTEM] [ERROR] Uninstall sequence encountered a critical error: ${e.message}`), {
+		return x(`> [SYSTEM] [ERROR] Uninstall sequence encountered a critical error: ${e.message}`), {
 			success: !1,
 			error: e.message
 		};
 	}
 });
 //#endregion
-export { m as MAIN_DIST, h as RENDERER_DIST, p as VITE_DEV_SERVER_URL };
+export { _ as MAIN_DIST, v as RENDERER_DIST, g as VITE_DEV_SERVER_URL };
