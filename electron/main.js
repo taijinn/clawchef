@@ -371,19 +371,41 @@ ipcMain.handle('save-channels', async (event, config) => {
 });
 
 ipcMain.handle('login-codex', async () => {
-    sendLog('> [SYSTEM] Launching OpenAI Codex OAuth Login...');
+    sendLog('> [SYSTEM] Launching Native PKCE OpenAI Codex OAuth Login...');
     try {
-        const wrapperPath = path.join(app.getPath('home'), '.openclaw', 'codex-login.mjs');
-        const wrapperCode = `Object.defineProperty(process.stdin, 'isTTY', {value: true}); Object.defineProperty(process.stdout, 'isTTY', {value: true}); process.argv.splice(1, 0, 'openclaw'); import('/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs');`;
-        await fs.mkdir(path.join(app.getPath('home'), '.openclaw'), { recursive: true });
-        await fs.writeFile(wrapperPath, wrapperCode, 'utf-8');
+        const piAiPath = '/opt/homebrew/lib/node_modules/openclaw/node_modules/@mariozechner/pi-ai/dist/utils/oauth/index.js';
+        const { loginOpenAICodex } = await import(piAiPath);
+
+        const credentials = await loginOpenAICodex({
+            onAuth: (info) => {
+                sendLog(`> [SYSTEM] Opening Browser to OpenAI Consent Screen natively...`);
+                shell.openExternal(info.url);
+            },
+            onPrompt: async (prompt) => {
+                sendLog(`> [SYSTEM] Manual Prompt Fallback: ${prompt.message}`);
+                throw new Error("Manual fallback not supported by the frontend. Please authorize via the browser.");
+            },
+            originator: 'clawchef'
+        });
+
+        const targetPath = path.join(app.getPath('home'), '.openclaw', 'credentials', 'openai-codex.json');
+        await fs.mkdir(path.dirname(targetPath), { recursive: true });
         
-        sendLog(`> [EXEC] openclaw models auth login --provider openai-codex`);
-        await runCommandStreaming('node', [wrapperPath, '--', 'models', 'auth', 'login', '--provider', 'openai-codex'], app.getPath('home'));
+        const payload = {
+            access_token: credentials.access,
+            refresh_token: credentials.refresh,
+            expiration: credentials.expires,
+            email: credentials.accountId || 'unknown',
+            // Backup exact match keys matching the raw return type
+            access: credentials.access,
+            refresh: credentials.refresh,
+            expires: credentials.expires,
+            accountId: credentials.accountId
+        };
+
+        await fs.writeFile(targetPath, JSON.stringify(payload, null, 2), { mode: 0o600 });
         
-        // Clean up wrapper script and log success
-        await fs.rm(wrapperPath, { force: true }).catch(() => {});
-        sendLog('> [SYSTEM] OpenAI Codex OAuth Login Successful!');
+        sendLog('> [SYSTEM] OpenAI Codex OAuth Login Successful through native @mariozechner library!');
         return { success: true };
     } catch (error) {
         sendLog(`> [SYSTEM] [ERROR] OpenAI Codex Login failed: ${error.message}`);

@@ -256,18 +256,29 @@ r.handle("setup-workspace", async (e, n) => {
 	}
 	return x("> [SYSTEM] Channel setup sequence finished."), { success: !0 };
 }), r.handle("login-codex", async () => {
-	x("> [SYSTEM] Launching OpenAI Codex OAuth Login...");
+	x("> [SYSTEM] Launching Native PKCE OpenAI Codex OAuth Login...");
 	try {
-		let e = a.join(t.getPath("home"), ".openclaw", "codex-login.mjs");
-		return await u.mkdir(a.join(t.getPath("home"), ".openclaw"), { recursive: !0 }), await u.writeFile(e, "Object.defineProperty(process.stdin, 'isTTY', {value: true}); Object.defineProperty(process.stdout, 'isTTY', {value: true}); process.argv.splice(1, 0, 'openclaw'); import('/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs');", "utf-8"), x("> [EXEC] openclaw models auth login --provider openai-codex"), await C("node", [
-			e,
-			"--",
-			"models",
-			"auth",
-			"login",
-			"--provider",
-			"openai-codex"
-		], t.getPath("home")), await u.rm(e, { force: !0 }).catch(() => {}), x("> [SYSTEM] OpenAI Codex OAuth Login Successful!"), { success: !0 };
+		let { loginOpenAICodex: e } = await import("./oauth-DzFh8ffL.js"), n = await e({
+			onAuth: (e) => {
+				x("> [SYSTEM] Opening Browser to OpenAI Consent Screen natively..."), i.openExternal(e.url);
+			},
+			onPrompt: async (e) => {
+				throw x(`> [SYSTEM] Manual Prompt Fallback: ${e.message}`), Error("Manual fallback not supported by the frontend. Please authorize via the browser.");
+			},
+			originator: "clawchef"
+		}), r = a.join(t.getPath("home"), ".openclaw", "credentials", "openai-codex.json");
+		await u.mkdir(a.dirname(r), { recursive: !0 });
+		let o = {
+			access_token: n.access,
+			refresh_token: n.refresh,
+			expiration: n.expires,
+			email: n.accountId || "unknown",
+			access: n.access,
+			refresh: n.refresh,
+			expires: n.expires,
+			accountId: n.accountId
+		};
+		return await u.writeFile(r, JSON.stringify(o, null, 2), { mode: 384 }), x("> [SYSTEM] OpenAI Codex OAuth Login Successful through native @mariozechner library!"), { success: !0 };
 	} catch (e) {
 		return x(`> [SYSTEM] [ERROR] OpenAI Codex Login failed: ${e.message}`), {
 			success: !1,
