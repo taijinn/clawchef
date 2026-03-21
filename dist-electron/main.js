@@ -176,18 +176,29 @@ r.handle("setup-workspace", async (e, n) => {
 	];
 	if (n.apiKeys && Array.isArray(n.apiKeys)) {
 		for (let e of n.apiKeys) if (e.key && e.key.trim() !== "") {
-			let t = "";
-			if (e.provider === "OpenAI") t = "--openai-api-key";
-			else if (e.provider === "Anthropic") t = "--anthropic-api-key";
+			let n = "";
+			if (e.provider === "OpenAI") n = "--openai-api-key";
+			else if (e.provider === "Anthropic") n = "--anthropic-api-key";
 			else if (e.provider === "Anthropic Token") {
-				i.push("--auth-choice", "token", "--token-provider", "anthropic", "--token", e.key.trim());
+				try {
+					let n = a.join(t.getPath("home"), ".openclaw", "credentials", "anthropic.json");
+					await u.mkdir(a.dirname(n), { recursive: !0 });
+					let r = {
+						type: "token",
+						provider: "anthropic",
+						token: e.key.trim()
+					};
+					await u.writeFile(n, JSON.stringify(r, null, 2), { mode: 384 }), x("> [SYSTEM] Saved Anthropic Setup Token to credentials store natively.");
+				} catch (e) {
+					x(`> [SYSTEM] [ERROR] Failed saving Anthropic Token to credentials: ${e.message}`);
+				}
 				continue;
-			} else if (e.provider === "Google Gemini") t = "--gemini-api-key";
-			else if (e.provider === "ByteDance Doubao") t = "--volcengine-api-key";
-			else if (e.provider === "xAI (Grok)") t = "--xai-api-key";
-			else if (e.provider === "Together AI") t = "--together-api-key";
+			} else if (e.provider === "Google Gemini") n = "--gemini-api-key";
+			else if (e.provider === "ByteDance Doubao") n = "--volcengine-api-key";
+			else if (e.provider === "xAI (Grok)") n = "--xai-api-key";
+			else if (e.provider === "Together AI") n = "--together-api-key";
 			else continue;
-			i.push(t, e.key.trim());
+			i.push(n, e.key.trim());
 		}
 	} else n.apiKey && i.push("--openai-api-key", n.apiKey);
 	try {

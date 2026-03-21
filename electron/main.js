@@ -268,7 +268,19 @@ ipcMain.handle('save-api-key', async (event, config) => {
                 if (item.provider === 'OpenAI') providerArg = '--openai-api-key';
                 else if (item.provider === 'Anthropic') providerArg = '--anthropic-api-key';
                 else if (item.provider === 'Anthropic Token') {
-                    args.push('--auth-choice', 'token', '--token-provider', 'anthropic', '--token', item.key.trim());
+                    try {
+                        const targetPath = path.join(app.getPath('home'), '.openclaw', 'credentials', 'anthropic.json');
+                        await fs.mkdir(path.dirname(targetPath), { recursive: true });
+                        const payload = {
+                            type: 'token',
+                            provider: 'anthropic',
+                            token: item.key.trim()
+                        };
+                        await fs.writeFile(targetPath, JSON.stringify(payload, null, 2), { mode: 0o600 });
+                        sendLog('> [SYSTEM] Saved Anthropic Setup Token to credentials store natively.');
+                    } catch (err) {
+                        sendLog(`> [SYSTEM] [ERROR] Failed saving Anthropic Token to credentials: ${err.message}`);
+                    }
                     continue;
                 }
                 else if (item.provider === 'Google Gemini') providerArg = '--gemini-api-key';
