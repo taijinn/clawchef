@@ -7,7 +7,7 @@ const i18n = {
     step0: "Welcome",
     step1: "Prerequisites",
     step2: "Workspace",
-    step3: "API Key",
+    step3: "AI Models",
     step4: "Channels",
     step5: "Control Panel",
     debug: "🛠️ Live Debug Log",
@@ -68,7 +68,7 @@ Must read: https://docs.openclaw.ai/gateway/security`,
     step0: "欢迎",
     step1: "前置条件",
     step2: "工作区",
-    step3: "API 密钥",
+    step3: "AI 模型",
     step4: "系统集成",
     step5: "控制面板",
     debug: "🛠️ 实时调试日志",
@@ -156,7 +156,7 @@ openclaw security audit --fix
     step0: "ようこそ",
     step1: "前提条件",
     step2: "ワークスペース",
-    step3: "APIキー",
+    step3: "AIモデル",
     step4: "チャネル",
     step5: "コントロールパネル",
     debug: "🛠️ ライブデバッグログ",
@@ -330,7 +330,8 @@ const configData = savedConfig ? JSON.parse(savedConfig) : {
   apiKey: '',
   apiKeys: [{ id: Date.now(), provider: 'OpenAI', key: '' }],
   channels: [{ id: Date.now(), provider: 'Telegram', key: '' }],
-  workspacePath: '~/openclaw-workspace'
+  workspacePath: '~/openclaw-workspace',
+  defaultModel: 'auto'
 };
 
 function saveProgress() {
@@ -568,9 +569,40 @@ function renderApiKey() {
   }
 
   const providers = [
-    'OpenAI', 'OpenAI Codex', 'Anthropic', 'Anthropic Token', 'Google Gemini', 'Google Gemini OAuth', 'DeepSeek',
-    'Moonshot AI', 'Qwen'
+    'OpenAI', 'OpenAI Codex', 'Anthropic', 'Anthropic Token', 'Google Gemini', 'Google Gemini OAuth'
   ];
+
+  const renderDefaultModelDropdown = () => {
+    const modelContainer = document.getElementById('default-model-container');
+    if (modelContainer) {
+      const validKeys = configData.apiKeys.filter(k => k.key && k.key.trim() !== '');
+      const configuredProviders = Array.from(new Set(validKeys.map(k => k.provider)));
+      
+      let optionsHTML = `<option value="auto" ${configData.defaultModel === 'auto' || !configData.defaultModel ? 'selected' : ''}>Auto-select best available model (OpenClaw Fallback Chain)</option>`;
+      
+      if (configuredProviders.includes('OpenAI') || configuredProviders.includes('OpenAI Codex')) {
+        optionsHTML += `<option value="m:openai:gpt-4o" ${configData.defaultModel === 'm:openai:gpt-4o' ? 'selected' : ''}>Use OpenAI (GPT-4o) as default</option>`;
+      }
+      if (configuredProviders.includes('Anthropic') || configuredProviders.includes('Anthropic Token')) {
+        optionsHTML += `<option value="m:anthropic:claude-3-5-sonnet-latest" ${configData.defaultModel === 'm:anthropic:claude-3-5-sonnet-latest' ? 'selected' : ''}>Use Anthropic (Claude 3.5 Sonnet) as default</option>`;
+      }
+      if (configuredProviders.includes('Google Gemini') || configuredProviders.includes('Google Gemini OAuth')) {
+        optionsHTML += `<option value="m:google-gemini:gemini-1.5-pro" ${configData.defaultModel === 'm:google-gemini:gemini-1.5-pro' ? 'selected' : ''}>Use Google Gemini (Gemini 1.5 Pro) as default</option>`;
+      }
+
+      modelContainer.innerHTML = `
+        <label class="input-label" style="font-size: 0.85rem; margin-bottom: 0.5rem; display: block;">Default Model Selection</label>
+        <p class="text-secondary" style="font-size: 0.75rem; margin-bottom: 1rem;">Choose how OpenClaw should pick which AI model to use by default. Only providers you configured above are shown.</p>
+        <select class="input-field" id="default-model-select" style="padding: 0.6rem; width: 100%;">
+          ${optionsHTML}
+        </select>
+      `;
+
+      document.getElementById('default-model-select').addEventListener('change', (e) => {
+        configData.defaultModel = e.target.value;
+      });
+    }
+  };
 
   const renderRows = () => {
     const container = document.getElementById('api-keys-container');
@@ -582,6 +614,8 @@ function renderApiKey() {
           <label class="input-label" style="font-size: 0.75rem;">Provider</label>
           <select class="input-field provider-select" data-id="${item.id}" style="padding: 0.6rem;">
             ${providers.map(p => `<option value="${p}" ${item.provider === p ? 'selected' : ''}>${p}</option>`).join('')}
+            <option disabled>──────────</option>
+            <option disabled>More coming soon...</option>
           </select>
         </div>
         <div style="flex: 2;">
@@ -594,7 +628,7 @@ function renderApiKey() {
             : `<button class="btn btn-secondary btn-login-oauth" data-provider="${item.provider}" data-id="${item.id}" style="width: 100%; height: 48px; border: 1px dashed var(--accent-primary); color: var(--text-primary);">Login via Browser</button>`
       ) : `<input type="password" class="input-field key-input" data-id="${item.id}" placeholder="Enter Key..." value="${item.key}" />`}
         </div>
-        <button class="btn btn-secondary remove-key-btn" data-id="${item.id}" style="padding: 0.6rem 0.8rem; height: 40px; color: var(--error-color); border: 1px solid var(--error-color); background: transparent;" ${configData.apiKeys.length === 1 ? 'disabled' : ''}>✕</button>
+        <button class="btn btn-secondary remove-key-btn" data-id="${item.id}" style="padding: 0.6rem 0.8rem; height: 40px; color: var(--error-color); border: 1px solid var(--error-color); background: transparent;">✕</button>
       </div>
     `).join('');
 
@@ -614,15 +648,25 @@ function renderApiKey() {
       el.addEventListener('input', (e) => {
         const id = parseInt(e.target.getAttribute('data-id'));
         const row = configData.apiKeys.find(r => r.id === id);
-        if (row) row.key = e.target.value;
+        if (row) {
+          row.key = e.target.value;
+          renderDefaultModelDropdown();
+        }
       });
     });
 
     document.querySelectorAll('.remove-key-btn').forEach(el => {
       el.addEventListener('click', (e) => {
-        if (configData.apiKeys.length <= 1) return;
         const id = parseInt(e.target.getAttribute('data-id'));
-        configData.apiKeys = configData.apiKeys.filter(r => r.id !== id);
+        if (configData.apiKeys.length <= 1) {
+          const row = configData.apiKeys.find(r => r.id === id);
+          if (row) {
+            row.key = '';
+            row.scanning = false;
+          }
+        } else {
+          configData.apiKeys = configData.apiKeys.filter(r => r.id !== id);
+        }
         renderRows(); // re-render list
       });
     });
@@ -658,6 +702,8 @@ function renderApiKey() {
         }
       });
     });
+
+    renderDefaultModelDropdown();
   };
 
   stepContent.innerHTML = `
@@ -668,6 +714,9 @@ function renderApiKey() {
       <div id="api-keys-container"></div>
       
       <button class="btn btn-secondary mt-2" id="btn-add-key" style="width: 100%; border-style: dashed; padding: 0.5rem;">+ Add Another Key</button>
+
+      <div id="default-model-container" style="margin-top: 2rem; padding: 1.2rem; border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius-md); background: rgba(0,0,0,0.15);">
+      </div>
 
       <div id="key-status" class="mt-4 text-secondary" style="display: none; height: 1.5rem; color: var(--primary-color);"></div>
 
@@ -694,6 +743,8 @@ function renderApiKey() {
   document.getElementById('btn-next').addEventListener('click', async () => {
     const btnNext = document.getElementById('btn-next');
     const statusDiv = document.getElementById('key-status');
+
+    configData.defaultModel = document.getElementById('default-model-select').value;
 
     btnNext.disabled = true;
     btnNext.innerText = 'Saving...';
@@ -775,7 +826,7 @@ function renderChannelSetup() {
         `<input type="password" class="input-field channel-input" data-id="${item.id}" placeholder="Enter connection string..." value="${item.key || ''}" />`
       )}
         </div>
-        <button class="btn btn-secondary remove-channel-btn" data-id="${item.id}" style="padding: 0.6rem 0.8rem; height: 40px; color: var(--error-color); border: 1px solid var(--error-color); background: transparent; margin-top: 1.5rem;" ${configData.channels.length === 1 ? 'disabled' : ''}>✕</button>
+        <button class="btn btn-secondary remove-channel-btn" data-id="${item.id}" style="padding: 0.6rem 0.8rem; height: 40px; color: var(--error-color); border: 1px solid var(--error-color); background: transparent; margin-top: 1.5rem;">✕</button>
       </div>
     `).join('');
 
@@ -814,10 +865,29 @@ function renderChannelSetup() {
     });
 
     document.querySelectorAll('.remove-channel-btn').forEach(el => {
-      el.addEventListener('click', (e) => {
-        if (configData.channels.length <= 1) return;
+      el.addEventListener('click', async (e) => {
         const id = parseInt(e.target.getAttribute('data-id'));
-        configData.channels = configData.channels.filter(r => r.id !== id);
+        const row = configData.channels.find(r => r.id === id);
+        
+        if (row && row.provider === 'WhatsApp' && row.scanning) {
+          try {
+            if (window.api.cancelWhatsAppQR) await window.api.cancelWhatsAppQR();
+          } catch(err) {}
+        }
+
+        if (configData.channels.length <= 1) {
+          if (row) {
+            row.key = '';
+            row.scanning = false;
+            if (row.provider === 'Lark (Feishu)') {
+              row.appSecret = '';
+              row.encryptKey = '';
+              row.verificationToken = '';
+            }
+          }
+        } else {
+          configData.channels = configData.channels.filter(r => r.id !== id);
+        }
         renderRows();
       });
     });
@@ -833,6 +903,8 @@ function renderChannelSetup() {
 
         try {
           const res = await window.api.generateWhatsAppQR(configData.workspacePath);
+          if (!row.scanning) return; // Cancelled via UI
+          
           if (res.success) {
             row.key = 'linked';
             row.scanning = false;
@@ -843,6 +915,7 @@ function renderChannelSetup() {
             alert("Failed to link WhatsApp: " + res.error);
           }
         } catch (err) {
+          if (!row.scanning) return; // Cancelled via UI
           row.scanning = false;
           renderRows();
           alert("Error linking WhatsApp.");

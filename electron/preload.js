@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld(
         killAllTasks: () => ipcRenderer.invoke('kill-all-tasks'),
         uninstallClaw: (workspacePath) => ipcRenderer.invoke('uninstall-claw', workspacePath),
         generateWhatsAppQR: (workspacePath) => ipcRenderer.invoke('generate-whatsapp-qr', workspacePath),
+        cancelWhatsAppQR: () => ipcRenderer.invoke('cancel-whatsapp-qr'),
         loginCodex: () => ipcRenderer.invoke('login-codex'),
         loginGemini: () => ipcRenderer.invoke('login-gemini'),
         testMessage: (workspacePath, channel, phone, msg) => ipcRenderer.invoke('test-message', workspacePath, channel, phone, msg),

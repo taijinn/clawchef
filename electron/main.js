@@ -283,9 +283,6 @@ ipcMain.handle('save-api-key', async (event, config) => {
                 if (item.provider === 'OpenAI') await writeCredential('openai', key);
                 else if (item.provider === 'Anthropic') await writeCredential('anthropic', key);
                 else if (item.provider === 'Google Gemini') await writeCredential('google-gemini', key);
-                else if (item.provider === 'DeepSeek') await writeCredential('deepseek', key);
-                else if (item.provider === 'Moonshot AI') await writeCredential('moonshot', key);
-                else if (item.provider === 'Qwen') await writeCredential('qwen', key);
                 else if (item.provider === 'Anthropic Token') {
                     try {
                         const targetPath = path.join(app.getPath('home'), '.openclaw', 'credentials', 'anthropic.json');
@@ -307,6 +304,29 @@ ipcMain.handle('save-api-key', async (event, config) => {
         await writeCredential('openai', config.apiKey.trim());
     }
     
+    try {
+        const cfgPath = path.join(app.getPath('home'), '.openclaw', 'openclaw.json');
+        let cfgObj = {};
+        try {
+            const rawCfg = await fs.readFile(cfgPath, 'utf8');
+            cfgObj = JSON.parse(rawCfg);
+        } catch (e) {}
+        
+        if (!cfgObj.agents) cfgObj.agents = {};
+        if (!cfgObj.agents.defaults) cfgObj.agents.defaults = {};
+        
+        if (config.defaultModel && config.defaultModel !== 'auto') {
+            cfgObj.agents.defaults.model = config.defaultModel;
+        } else {
+            delete cfgObj.agents.defaults.model;
+        }
+        
+        await fs.writeFile(cfgPath, JSON.stringify(cfgObj, null, 2));
+        sendLog(`> [SYSTEM] Default model preferences updated in openclaw.json.`);
+    } catch (err) {
+        sendLog(`> [SYSTEM] [ERROR] Failed to update default model preferences: ${err.message}`);
+    }
+
     sendLog('> [SYSTEM] API Configuration applied successfully.');
     return { success: true };
 });
@@ -544,6 +564,16 @@ ipcMain.handle('login-gemini', async () => {
     } catch (error) {
         sendLog(`> [SYSTEM] [ERROR] Google Gemini Login failed: ${error.message}`);
         return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('cancel-whatsapp-qr', async () => {
+    sendLog('> [SYSTEM] Cancelling WhatsApp QR generation...');
+    try {
+        await execAsync(`pkill -f "channels login --channel whatsapp"`);
+        return { success: true };
+    } catch (e) {
+        return { success: true };
     }
 });
 
