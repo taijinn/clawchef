@@ -1085,14 +1085,14 @@ function renderControlPanel() {
         <div style="flex: 1;">
           <div class="test-message-card" style="background: var(--bg-tertiary); padding: 1rem; border-radius: var(--radius-md); text-align: left; border: 1px solid var(--border-color);">
              <div class="flex" style="gap: 8px; margin-bottom: 8px;">
-               <div style="flex: 1;">
+               <div style="flex: 1.2;">
                  <label class="input-label" style="font-size: 0.75rem; margin-bottom: 4px;">Channel</label>
-                 <select id="test-channel" class="input-field" style="padding: 0.6rem; font-size: 0.85rem;">
+                 <select id="test-channel" class="input-field" style="padding: 0.6rem; font-size: 0.85rem; padding-right: 2rem;">
                    <option value="whatsapp">WhatsApp</option>
                    <option value="telegram">Telegram</option>
                    <option value="feishu">Lark (Feishu)</option>
-                   <option value="slack">Slack</option>
-                   <option value="discord">Discord</option>
+                   <option disabled>──────────</option>
+                   <option disabled>More coming...</option>
                  </select>
                </div>
                <div style="flex: 2;">
