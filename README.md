@@ -1,8 +1,8 @@
-<div align="center">
-  <img src="public/logo.png" alt="ClawChef Logo" width="200" style="border-radius: 50%;"/>
-  <h1>ClawChef</h1>
-  <h3>Your Graphical Interface for OpenClaw</h3>
-</div>
+# ClawChef
+<br>
+<img src="public/logo.png" alt="ClawChef Logo" width="150" align="right" style="border-radius: 50%;">
+
+## Your Graphical Interface for OpenClaw
 
 ClawChef is an independent, open-source project designed to provide a fast, intuitive, and easy-to-use graphical setup interface for the [OpenClaw](https://github.com/openclaw/openclaw) AI agent orchestrator.
 
