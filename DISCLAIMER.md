@@ -3,16 +3,16 @@
 **By using ClawChef, you acknowledge and agree to the following terms:**
 
 ## 1. Independence from OpenClaw
-ClawChef is an independent, open-source project designed to provide a graphical setup interface for the OpenClaw AI agent orchestrator. 
+ClawChef is a free software project designed to act purely as a graphical interface and setup utility for OpenClaw. **ClawChef does not host, provide, or operate any AI services, bots, or messaging platforms itself.**
 * **No Affiliation:** The developers of ClawChef are not affiliated with, endorsed by, or part of the core OpenClaw team.
 * **Feature Discrepancies:** ClawChef may not support all OpenClaw functionalities, nor does it guarantee that it configures OpenClaw features in precisely the same manner as the official CLI.
 * **No Liability for OpenClaw:** Any bugs, issues, data loss, or system damage caused by the underlying OpenClaw engine itself are strictly not the responsibility of the ClawChef project.
 
-## 2. Provided "As-Is" (Open-Source Application)
-ClawChef is an open-source project provided purely "as-is" without any express or implied warranties. Your use of ClawChef is entirely at your own risk. The developers, contributors, and maintainers of ClawChef shall not be held liable for any damages, bugs, data loss, downtime, or financial consequences arising from the use, misuse, or inability to use this software. Please note that application actions and outcomes are usually caused by the underlying OpenClaw engine, the AI models you choose to use, and the channels you connect—all of which act as multiple independent players outside of ClawChef's control.
+## 2. Provided "As-Is" (Software Application)
+ClawChef is a software project provided purely "as-is" without any express or implied warranties. Your use of ClawChef is entirely at your own risk. The developers, contributors, and maintainers of ClawChef shall not be held liable for any damages, bugs, data loss, downtime, or financial consequences arising from the use, misuse, or inability to use this software. Please note that application actions and outcomes are usually caused by the underlying OpenClaw engine, the AI models you choose to use, and the channels you connect—all of which act as multiple independent players outside of ClawChef's control.
 
 ## 3. Third-Party AI Services & Costs
-OpenClaw connects to external third-party Large Language Model (LLM) providers (e.g., OpenAI, Anthropic, Google Gemini). 
+OpenClaw connects to external third-party Large Language Model (LLM) providers (e.g., OpenAI, Anthropic, Google Gemini).
 * **API Usage:** You are solely responsible for providing your own API keys.
 * **Financial Liability:** You are fully responsible for any and all costs, fees, or overages incurred on your third-party API accounts resulting from OpenClaw's usage, background tasks, or recursive agent loops.
 * **Terms of Service:** You must adhere strictly to the usage policies of the respective AI providers you configure.
