@@ -376,8 +376,9 @@ const stepContent = document.getElementById('step-content');
 /* -- Step 0: Welcome -- */
 function renderWelcome() {
   stepContent.innerHTML = `
-    <div class="animate-fade-in-up">
-      <h2 class="mb-lg" style="color: var(--error-color);">${t('welcome_title')}</h2>
+    <div class="animate-fade-in-up" style="display: flex; flex-direction: column; align-items: center;">
+      <img src="./logo.jpg" alt="Claw Chef" style="width: 140px; height: 140px; border-radius: 50%; box-shadow: 0 8px 24px rgba(0,0,0,0.2); margin-bottom: 1.5rem;">
+      <h2 class="mb-lg" style="color: var(--error-color); text-align: center; width: 100%;">${t('welcome_title')}</h2>
       <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.3); padding: 1.2rem; border-radius: var(--radius-md); font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap;" id="i18n-welcome-text">${t('welcome_text')}</div>
       
       <div class="input-group" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 2rem;">
@@ -591,9 +592,9 @@ function renderApiKey() {
     if (modelContainer) {
       const validKeys = configData.apiKeys.filter(k => k.key && k.key.trim() !== '');
       const configuredProviders = Array.from(new Set(validKeys.map(k => k.provider)));
-      
+
       let optionsHTML = `<option value="auto" ${configData.defaultModel === 'auto' || !configData.defaultModel ? 'selected' : ''}>Auto-select best available model (OpenClaw Fallback Chain)</option>`;
-      
+
       if (configuredProviders.includes('OpenAI') || configuredProviders.includes('OpenAI Codex')) {
         optionsHTML += `<option value="m:openai:gpt-4o" ${configData.defaultModel === 'm:openai:gpt-4o' ? 'selected' : ''}>Use OpenAI (GPT-4o) as default</option>`;
       }
@@ -882,11 +883,11 @@ function renderChannelSetup() {
       el.addEventListener('click', async (e) => {
         const id = parseInt(e.target.getAttribute('data-id'));
         const row = configData.channels.find(r => r.id === id);
-        
+
         if (row && row.provider === 'WhatsApp' && row.scanning) {
           try {
             if (window.api.cancelWhatsAppQR) await window.api.cancelWhatsAppQR();
-          } catch(err) {}
+          } catch (err) { }
         }
 
         if (configData.channels.length <= 1) {
@@ -918,7 +919,7 @@ function renderChannelSetup() {
         try {
           const res = await window.api.generateWhatsAppQR(configData.workspacePath);
           if (!row.scanning) return; // Cancelled via UI
-          
+
           if (res.success) {
             row.key = 'linked';
             row.scanning = false;
