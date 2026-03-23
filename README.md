@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/logo.jpg" alt="ClawChef Logo" width="200" style="border-radius: 50%;"/>
+  <img src="public/logo.png" alt="ClawChef Logo" width="200" style="border-radius: 50%;"/>
   <h1>ClawChef</h1>
   <h3>Your Graphical Interface for OpenClaw</h3>
 </div>
