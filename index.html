@@ -1,23 +1,31 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/jpeg" href="/src/assets/logo.jpg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OpenClaw Setup</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <div style="position: absolute; top: 2.5rem; right: 1.5rem; z-index: 1000; pointer-events: auto; -webkit-app-region: no-drag;" class="lang-selector-wrapper">
-      <select id="lang-select" style="appearance: none; -webkit-appearance: none; background: rgba(255, 255, 255, 0.05); color: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.4rem 2rem 0.4rem 1rem; font-family: inherit; font-size: 0.85rem; font-weight: 500; outline: none; cursor: pointer; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.2s ease; -webkit-app-region: no-drag;">
-        <option value="en">English</option>
-        <option value="zh">中文</option>
-        <option value="ja">日本語</option>
-      </select>
-      <svg style="position: absolute; right: 0.8rem; top: 50%; transform: translateY(-50%); pointer-events: none; width: 12px; height: 12px; stroke: rgba(255,255,255,0.6); fill: none; stroke-width: 2px;" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-        <polyline points="6 9 12 15 18 9"></polyline>
-      </svg>
-    </div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="./public/logo.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenClaw Setup</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <div
+    style="position: absolute; top: 2.5rem; right: 1.5rem; z-index: 1000; pointer-events: auto; -webkit-app-region: no-drag;"
+    class="lang-selector-wrapper">
+    <select id="lang-select"
+      style="appearance: none; -webkit-appearance: none; background: rgba(255, 255, 255, 0.05); color: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.4rem 2rem 0.4rem 1rem; font-family: inherit; font-size: 0.85rem; font-weight: 500; outline: none; cursor: pointer; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.2s ease; -webkit-app-region: no-drag;">
+      <option value="en">English</option>
+      <option value="zh">中文</option>
+      <option value="ja">日本語</option>
+    </select>
+    <svg
+      style="position: absolute; right: 0.8rem; top: 50%; transform: translateY(-50%); pointer-events: none; width: 12px; height: 12px; stroke: rgba(255,255,255,0.6); fill: none; stroke-width: 2px;"
+      stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+      <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
 </html>

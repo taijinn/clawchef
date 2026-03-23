@@ -1,5 +1,5 @@
 import './style.css'
-import logoUrl from './assets/logo.jpg'
+import logoUrl from '../public/logo.png'
 const i18n = {
   en: {
     title: "ClawChef - Your OpenClaw Butler",
