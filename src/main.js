@@ -377,7 +377,9 @@ const stepContent = document.getElementById('step-content');
 function renderWelcome() {
   stepContent.innerHTML = `
     <div class="animate-fade-in-up">
-      <img src="logo.png" alt="ClawChef Logo" style="width: 140px; height: 140px; margin: 0 auto 1.5rem auto; display: block; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5)); border-radius: 50%;">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <img src="/logo.png" alt="ClawChef Logo" style="width: 120px; display: inline-block; filter: drop-shadow(0 4px 12px rgba(239, 68, 68, 0.2)); transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+      </div>
       <h2 class="mb-lg" style="color: var(--error-color); text-align: center;">${t('welcome_title')}</h2>
       <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.3); padding: 1.2rem; border-radius: var(--radius-md); font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap;" id="i18n-welcome-text">${t('welcome_text')}</div>
       
@@ -1085,6 +1087,9 @@ function renderChannelSetup() {
 function renderControlPanel() {
   stepContent.innerHTML = `
     <div class="animate-fade-in-up" style="text-align: center; padding: 1rem 0;">
+      <div style="margin-bottom: 24px;">
+        <img src="/logo.png" alt="ClawChef Logo" style="width: 80px; display: inline-block; filter: drop-shadow(0 4px 12px rgba(239, 68, 68, 0.2)); transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+      </div>
       <h2 id="control-title" class="text-gradient mb-md">${t('control_title')}</h2>
       <p id="control-subtitle" class="text-secondary mb-xl">${t('control_sub')} ${configData.workspacePath}</p>
       

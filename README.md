@@ -1,6 +1,7 @@
 # ClawChef
-<br>
-<img src="public/logo.png" alt="ClawChef Logo" width="150" align="right" style="border-radius: 50%;">
+<p align="center">
+  <img src="public/logo.png" alt="ClawChef Logo" width="180">
+</p>
 
 ## Your Graphical Interface for OpenClaw
 
