@@ -22,3 +22,14 @@ Because ClawChef interfaces with external AI models and configures a highly priv
 ClawChef is licensed under the MIT License. The software is provided purely "as-is", without any warranties or guarantees of any kind. 
 
 The developers of ClawChef hold **zero liability** for any API costs, messaging platform bans, or unexpected destructive actions carried out by the underlying OpenClaw agent instance on your machine.
+
+---
+
+### ☕ Support the Project
+ClawChef is currently in **Beta**. This core beta version is completely free and open-source. 
+
+If this tool saves you hours of terminal configuration, please consider supporting the development! 
+<a href="https://www.buymeacoffee.com/YOUR_USERNAME_HERE" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a>
+
+### 🚀 Roadmap & Future Monetization
+While the core setup wizard functionality provided in this Beta will remain free and open-source, we are actively developing advanced, premium features. These future features will be launched as paid add-ons or a premium tier to sustainably fund continuous development.
