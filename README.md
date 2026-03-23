@@ -1,6 +1,7 @@
 # 
 <div align="center">
-  <img src="public/logo.png" alt="ClawChef Logo" width="200"> ClawChef
+  <img src="public/logo.png" alt="ClawChef Logo" width="200"> 
+  # ClawChef
 </div>
 
 
