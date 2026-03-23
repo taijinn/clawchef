@@ -380,11 +380,19 @@ function renderWelcome() {
       <h2 class="mb-lg" style="color: var(--error-color);">${t('welcome_title')}</h2>
       <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.3); padding: 1.2rem; border-radius: var(--radius-md); font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap;" id="i18n-welcome-text">${t('welcome_text')}</div>
       
-      <div class="input-group" style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 2rem;">
-        <input type="checkbox" id="accept-risk-cb" style="margin-top: 4px; width: 16px; height: 16px; cursor: pointer;">
-        <label for="accept-risk-cb" style="font-size: 0.9rem; cursor: pointer; user-select: none;" id="i18n-welcome-cb">
-          ${t('welcome_cb')}
-        </label>
+      <div class="input-group" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 2rem;">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <input type="checkbox" id="accept-risk-cb" style="margin-top: 4px; width: 16px; height: 16px; min-width: 16px; cursor: pointer;">
+          <label for="accept-risk-cb" style="font-size: 0.9rem; cursor: pointer; user-select: none; line-height: 1.4;" id="i18n-welcome-cb">
+            ${t('welcome_cb')}
+          </label>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <input type="checkbox" id="accept-disclaimer-cb" style="margin-top: 4px; width: 16px; height: 16px; min-width: 16px; cursor: pointer;">
+          <label for="accept-disclaimer-cb" style="font-size: 0.9rem; cursor: pointer; user-select: none; line-height: 1.4;">
+            I have fully read and agree to the <a href="https://github.com/taijinn/ClawChef/blob/main/DISCLAIMER.md" target="_blank" style="color: var(--accent-primary); text-decoration: underline;">DISCLAIMER.md</a> regarding Autonomous Action, System Security Risks, and "As-Is" No Liability software usage.
+          </label>
+        </div>
       </div>
 
       <div class="flex justify-end gap-md">
@@ -393,18 +401,24 @@ function renderWelcome() {
     </div>
   `;
 
-  document.getElementById('accept-risk-cb').addEventListener('change', (e) => {
-    const btn = document.getElementById('btn-next');
-    if (e.target.checked) {
-      btn.disabled = false;
-      btn.style.opacity = '1';
-      btn.style.cursor = 'pointer';
+  const cb1 = document.getElementById('accept-risk-cb');
+  const cb2 = document.getElementById('accept-disclaimer-cb');
+  const btnNext = document.getElementById('btn-next');
+
+  const checkState = () => {
+    if (cb1.checked && cb2.checked) {
+      btnNext.disabled = false;
+      btnNext.style.opacity = '1';
+      btnNext.style.cursor = 'pointer';
     } else {
-      btn.disabled = true;
-      btn.style.opacity = '0.5';
-      btn.style.cursor = 'not-allowed';
+      btnNext.disabled = true;
+      btnNext.style.opacity = '0.5';
+      btnNext.style.cursor = 'not-allowed';
     }
-  });
+  };
+
+  cb1.addEventListener('change', checkState);
+  cb2.addEventListener('change', checkState);
 
   document.getElementById('btn-next').addEventListener('click', () => {
     currentStep = 1;
