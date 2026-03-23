@@ -4,7 +4,6 @@
   
 </div>
 
-# ClawChef
 ## Your Graphical Interface for OpenClaw
 
 
