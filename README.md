@@ -1,4 +1,4 @@
-# <img src="public/logo.png" alt="ClawChef Logo" width="100" align="center"> <br>ClawChef
+# <img src="public/logo.png" alt="ClawChef Logo" width="200"> <br>ClawChef
 
 ## Your Graphical Interface for OpenClaw
 
