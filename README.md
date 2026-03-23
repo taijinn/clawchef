@@ -32,4 +32,4 @@ If this tool saves you hours of terminal configuration, please consider supporti
 <a href="https://www.buymeacoffee.com/YOUR_USERNAME_HERE" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a>
 
 ### 🚀 Roadmap & Future Monetization
-While the core setup wizard functionality provided in this Beta will remain free and open-source, we are actively developing advanced, premium features. These future features will be launched as paid add-ons or a premium tier to sustainably fund continuous development.
+While the core setup wizard functionality provided in this Beta will remain completely free and open-source, we may explore advanced, optional features in the future. These features might be introduced as a paid tier or add-ons to help sustainably fund continuous development, but the core tool will always be yours to use!
