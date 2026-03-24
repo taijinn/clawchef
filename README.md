@@ -11,7 +11,7 @@ ClawChef is an independent, open-source project designed to provide a fast, intu
 
 ## 🎥 Quick Demo
 
-https://github.com/taijinn/ClawChef/releases/download/v1.0.1/demo-perfect-english.mov
+<video controls width="100%" src="https://github.com/taijinn/ClawChef/releases/download/v1.0.1/demo-perfect-english.mov"></video>
 
 ### ⚠️ IMPORTANT: Read the Disclaimer
 Because ClawChef interfaces with external AI models and configures a highly privileged autonomous agent (OpenClaw), its use comes with inherent system and financial risks. 
