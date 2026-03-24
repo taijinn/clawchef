@@ -2,19 +2,16 @@
   <img src="public/logo.png" alt="ClawChef Logo" width="200"> 
   <h1>ClawChef</h1>
   <h2>Your Graphical Interface for OpenClaw</h2>
-  
 
-      <a href="https://github.com/taijinn/ClawChef/releases/latest"><img src="https://img.shields.io/badge/Download_for_macOS_(ARM64)-orange?style=for-the-badge&logo=apple&logoColor=white" alt="Download macOS (ARM64)" height="200"></a>
-
-
+  <a href="https://github.com/taijinn/ClawChef/releases/latest"><img src="https://img.shields.io/badge/Download_for_macOS_(ARM64)-orange?style=for-the-badge&logo=apple&logoColor=white" alt="Download macOS (ARM64)" height="200"></a>
 </div>
 
 
 ClawChef is an independent, open-source project designed to provide a fast, intuitive, and easy-to-use graphical setup interface for the [OpenClaw](https://github.com/openclaw/openclaw) AI agent orchestrator.
 
 ## 🎥 Quick Demo
-<video src="https://github.com/taijinn/ClawChef/raw/main/public/demo.mov" controls="controls" style="max-width: 100%;">
-</video>
+
+<video src="https://github.com/taijinn/ClawChef/raw/main/public/demo.mov" width="100%" controls autoplay loop muted playsinline></video>
 
 ### ⚠️ IMPORTANT: Read the Disclaimer
 Because ClawChef interfaces with external AI models and configures a highly privileged autonomous agent (OpenClaw), its use comes with inherent system and financial risks. 
