@@ -3,10 +3,6 @@
   <h1>ClawChef</h1>
   <h2>Your Graphical Interface for OpenClaw</h2>
   
-> ### 🍎 macOS Installation
-> 
-> Download the `.dmg` file for Apple Silicon (M1/M2/M3) here:
-> 
 
       <a href="https://github.com/taijinn/ClawChef/releases/latest"><img src="https://img.shields.io/badge/Download_for_macOS_(ARM64)-orange?style=for-the-badge&logo=apple&logoColor=white" alt="Download macOS (ARM64)" height="200"></a>
 
