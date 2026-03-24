@@ -7,9 +7,21 @@
 > 
 > Download the `.dmg` file for Apple Silicon (M1/M2/M3) here:
 > 
-> <a href="https://github.com/taijinn/ClawChef/releases/latest">
->   <img src="https://img.shields.io/badge/Download_for_macOS_(ARM64)-orange?style=for-the-badge&logo=apple&logoColor=white" height="60">
-> </a>
+ <table width="100%">
+  <tr style="border: none;">
+    <td align="center" style="background-color: #f6f8fa; padding: 40px; border: 2px solid #ff9a00; border-radius: 10px;">
+      <a href="https://github.com/taijinn/ClawChef/releases/latest">
+        <img src="https://img.shields.io/badge/DOWNLOAD_NOW-orange?style=for-the-badge&logo=apple&logoColor=white" width="350">
+      </a>
+      <br>
+      <br>
+      <strong>🪟 Windows & 🐧 Linux versions coming soon!</strong><br>
+      <a href="YOUR_REGISTRATION_LINK_HERE">
+        <i>Stay tuned and get notified when they launch →</i>
+      </a>
+    </td>
+  </tr>
+</table>
 </div>
 
 
