@@ -1,145 +1,195 @@
-import { BrowserWindow as e, app as t, dialog as n, ipcMain as r, shell as i } from "electron";
-import a from "node:path";
-import { fileURLToPath as o } from "node:url";
-import { exec as s, spawn as c } from "node:child_process";
-import l from "node:util";
-import u from "node:fs/promises";
-import d from "node:crypto";
-import f from "node:http";
+import { BrowserWindow, app, dialog, ipcMain, shell } from "electron";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { exec, spawn } from "node:child_process";
+import util from "node:util";
+import fs from "node:fs/promises";
+import crypto from "node:crypto";
+import http from "node:http";
 //#region electron/main.js
-var p = l.promisify(s);
-async function m() {
+var execAsync = util.promisify(exec);
+async function ensurePath() {
 	if (process.platform === "darwin") try {
-		let { stdout: e } = await p(`"${process.env.SHELL || "/bin/zsh"}" -ilc 'echo -n "_SEPARATOR_"; env; echo -n "_SEPARATOR_"'`), t = e.split("_SEPARATOR_")[1].split("\n").find((e) => e.startsWith("PATH="));
-		t && t.replace("PATH=", "").trim();
-	} catch (e) {
-		console.error("Could not fix PATH:", e);
+		const { stdout } = await execAsync(`"${process.env.SHELL || "/bin/zsh"}" -ilc 'echo -n "_SEPARATOR_"; env; echo -n "_SEPARATOR_"'`);
+		const pathLine = stdout.split("_SEPARATOR_")[1].split("\n").find((line) => line.startsWith("PATH="));
+		if (pathLine) pathLine.replace("PATH=", "").trim();
+	} catch (error) {
+		console.error("Could not fix PATH:", error);
 	}
 }
-process.env.PATH = `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || ""}`, m();
-var h = a.dirname(o(import.meta.url));
-process.env.APP_ROOT = a.join(h, "..");
-var g = process.env.VITE_DEV_SERVER_URL, _ = a.join(process.env.APP_ROOT, "dist-electron"), v = a.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = g ? a.join(process.env.APP_ROOT, "public") : v;
-var y, b = null;
-function x(e) {
-	console.log(e), y && y.webContents && y.webContents.send("debug-log", e);
+process.env.PATH = `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || ""}`;
+ensurePath();
+var __dirname = path.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path.join(__dirname, "..");
+var VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+var MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+var RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+var win;
+var managerWin = null;
+function sendLog(msg) {
+	console.log(msg);
+	if (win && win.webContents) win.webContents.send("debug-log", msg);
 }
-function S() {
-	y = new e({
+function createWindow() {
+	win = new BrowserWindow({
 		width: 1e3,
 		height: 850,
 		titleBarStyle: "hiddenInset",
 		webPreferences: {
-			preload: a.join(h, "preload.mjs"),
-			nodeIntegration: !1,
-			contextIsolation: !0
+			preload: path.join(__dirname, "preload.mjs"),
+			nodeIntegration: false,
+			contextIsolation: true
 		}
-	}), g ? y.loadURL(g) : y.loadFile(a.join(v, "index.html"));
+	});
+	if (VITE_DEV_SERVER_URL) win.loadURL(VITE_DEV_SERVER_URL);
+	else win.loadFile(path.join(RENDERER_DIST, "index.html"));
 }
-t.whenReady().then(S), t.on("window-all-closed", () => {
-	process.platform !== "darwin" && t.quit();
-}), t.on("activate", () => {
-	e.getAllWindows().length === 0 && S();
+app.whenReady().then(createWindow);
+app.on("window-all-closed", () => {
+	if (process.platform !== "darwin") app.quit();
 });
-function C(e, t, n) {
-	return new Promise((r, i) => {
-		e === "openclaw" ? (t = ["/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs", ...t], e = "/opt/homebrew/bin/node") : e === "brew" ? e = process.arch === "arm64" ? "/opt/homebrew/bin/brew" : "/usr/local/bin/brew" : e === "git" ? e = process.arch === "arm64" ? "/opt/homebrew/bin/git" : "/usr/bin/git" : e === "npm" && (e = process.arch === "arm64" ? "/opt/homebrew/bin/npm" : "/usr/local/bin/npm"), x(`> [EXEC] ${e} ${t.join(" ")}`);
-		let a = c(e, t, {
-			cwd: n,
-			shell: !0
-		}), o = "";
-		a.stdout.on("data", (e) => {
-			let t = e.toString();
-			o += t, x(t.trim());
-		}), a.stderr.on("data", (e) => {
-			let t = e.toString();
-			o += t, x(t.trim());
-		}), a.on("close", (e) => {
-			if (e === 0) r();
+app.on("activate", () => {
+	if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+function runCommandStreaming(cmd, args, cwd) {
+	return new Promise((resolve, reject) => {
+		if (cmd === "openclaw") {
+			args = ["/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs", ...args];
+			cmd = "/opt/homebrew/bin/node";
+		} else if (cmd === "brew") cmd = process.arch === "arm64" ? "/opt/homebrew/bin/brew" : "/usr/local/bin/brew";
+		else if (cmd === "git") cmd = process.arch === "arm64" ? "/opt/homebrew/bin/git" : "/usr/bin/git";
+		else if (cmd === "npm") cmd = process.arch === "arm64" ? "/opt/homebrew/bin/npm" : "/usr/local/bin/npm";
+		sendLog(`> [EXEC] ${cmd} ${args.join(" ")}`);
+		const child = spawn(cmd, args, {
+			cwd,
+			shell: true
+		});
+		let outputBuffer = "";
+		child.stdout.on("data", (data) => {
+			const str = data.toString();
+			outputBuffer += str;
+			sendLog(str.trim());
+		});
+		child.stderr.on("data", (data) => {
+			const str = data.toString();
+			outputBuffer += str;
+			sendLog(str.trim());
+		});
+		child.on("close", (code) => {
+			if (code === 0) resolve();
 			else {
-				let t = o.match(/Error: (.+)/), n = t ? t[1] : o.slice(-200).trim() || `Command failed with code ${e}`;
-				i(Error(n));
+				const match = outputBuffer.match(/Error: (.+)/);
+				const cause = match ? match[1] : outputBuffer.slice(-200).trim() || `Command failed with code ${code}`;
+				reject(new Error(cause));
 			}
-		}), a.on("error", (e) => i(e));
+		});
+		child.on("error", (err) => reject(err));
 	});
 }
-r.handle("check-prerequisites", async () => {
-	let e = {
-		git: !1,
-		python: !1,
-		npm: !1
+ipcMain.handle("check-prerequisites", async () => {
+	const result = {
+		git: false,
+		python: false,
+		npm: false
 	};
-	x("> [SYSTEM] Checking System Prerequisites...");
+	sendLog("> [SYSTEM] Checking System Prerequisites...");
 	try {
-		x("> [EXEC] git --version");
-		let { stdout: t } = await p("git --version");
-		x(t.trim()), e.git = !0;
+		sendLog("> [EXEC] git --version");
+		const { stdout } = await execAsync("git --version");
+		sendLog(stdout.trim());
+		result.git = true;
 	} catch (e) {
-		x(`> [SYSTEM] [ERROR] Git not found: ${e.message}`);
+		sendLog(`> [SYSTEM] [ERROR] Git not found: ${e.message}`);
 	}
 	try {
-		x("> [EXEC] python3 --version");
-		let { stdout: t } = await p("python3 --version");
-		x(t.trim()), e.python = !0;
+		sendLog("> [EXEC] python3 --version");
+		const { stdout } = await execAsync("python3 --version");
+		sendLog(stdout.trim());
+		result.python = true;
 	} catch (e) {
-		x(`> [SYSTEM] [ERROR] Python3 not found: ${e.message}`);
+		sendLog(`> [SYSTEM] [ERROR] Python3 not found: ${e.message}`);
 	}
 	try {
-		x("> [EXEC] npm --version");
-		let { stdout: t } = await p("npm --version");
-		x(t.trim()), e.npm = !0;
+		sendLog("> [EXEC] npm --version");
+		const { stdout } = await execAsync("npm --version");
+		sendLog(stdout.trim());
+		result.npm = true;
 	} catch (e) {
-		x(`> [SYSTEM] [ERROR] NPM not found: ${e.message}`);
+		sendLog(`> [SYSTEM] [ERROR] NPM not found: ${e.message}`);
 	}
-	return e;
+	return result;
 });
-async function w() {
+async function ensureHomebrew() {
 	try {
-		return await p("brew --version"), x("> [SYSTEM] Homebrew is already installed."), !0;
-	} catch {
-		x("> [SYSTEM] Homebrew not found. Attempting installation...");
+		await execAsync("brew --version");
+		sendLog("> [SYSTEM] Homebrew is already installed.");
+		return true;
+	} catch (e) {
+		sendLog("> [SYSTEM] Homebrew not found. Attempting installation...");
 		try {
-			x("> [SYSTEM] Checking/Installing Xcode Command Line Tools..."), x("> [EXEC] xcode-select --install"), await C("xcode-select", ["--install"], process.env.APP_ROOT);
-		} catch {
-			x("> [SYSTEM] Xcode Command Line Tools already installed or user prompted.");
+			sendLog("> [SYSTEM] Checking/Installing Xcode Command Line Tools...");
+			sendLog("> [EXEC] xcode-select --install");
+			await runCommandStreaming("xcode-select", ["--install"], process.env.APP_ROOT);
+		} catch (xcodeErr) {
+			sendLog("> [SYSTEM] Xcode Command Line Tools already installed or user prompted.");
 		}
-		x("> [SYSTEM] Downloading and running Homebrew installer script...");
+		sendLog("> [SYSTEM] Downloading and running Homebrew installer script...");
 		try {
-			return await C("bash", ["-c", "NONINTERACTIVE=1 /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""], t.getPath("home")), process.arch === "arm64" ? process.env.PATH = `/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH}` : process.env.PATH = `/usr/local/bin:/usr/local/sbin:${process.env.PATH}`, x("> [SYSTEM] Homebrew installation complete."), !0;
-		} catch (e) {
-			throw x(`> [SYSTEM] [ERROR] Failed to install Homebrew automatically: ${e.message}`), e;
+			await runCommandStreaming("bash", ["-c", "NONINTERACTIVE=1 /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""], app.getPath("home"));
+			if (process.arch === "arm64") process.env.PATH = `/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH}`;
+			else process.env.PATH = `/usr/local/bin:/usr/local/sbin:${process.env.PATH}`;
+			sendLog("> [SYSTEM] Homebrew installation complete.");
+			return true;
+		} catch (brewErr) {
+			sendLog(`> [SYSTEM] [ERROR] Failed to install Homebrew automatically: ${brewErr.message}`);
+			throw brewErr;
 		}
 	}
 }
-r.handle("install-dependency", async (e, n) => {
-	x(`> [SYSTEM] Requested auto-installation for missing dependency: ${n}`);
+ipcMain.handle("install-dependency", async (event, dependencyName) => {
+	sendLog(`> [SYSTEM] Requested auto-installation for missing dependency: ${dependencyName}`);
 	try {
-		await w();
-		let e = "", r = "";
-		if (n === "git") e = "git", r = "git --version";
-		else if (n === "python") e = "python", r = "python3 --version";
-		else if (n === "npm") e = "node", r = "npm --version";
-		else throw Error("Unknown dependency requested");
-		x(`> [SYSTEM] Installing ${e} via Homebrew...`), await C("brew", ["install", e], t.getPath("home")), x(`> [SYSTEM] Verifying installation of ${n}...`), x(`> [EXEC] ${r}`);
-		let { stdout: i } = await p(r);
-		return x(i.trim()), x(`> [SYSTEM] ${n} installed successfully!`), { success: !0 };
-	} catch (e) {
-		return x(`> [SYSTEM] [ERROR] Installation pipeline failed: ${e.message}`), {
-			success: !1,
-			error: e.message
+		await ensureHomebrew();
+		let brewPackageName = "";
+		let verifyCommand = "";
+		if (dependencyName === "git") {
+			brewPackageName = "git";
+			verifyCommand = "git --version";
+		} else if (dependencyName === "python") {
+			brewPackageName = "python";
+			verifyCommand = "python3 --version";
+		} else if (dependencyName === "npm") {
+			brewPackageName = "node";
+			verifyCommand = "npm --version";
+		} else throw new Error("Unknown dependency requested");
+		sendLog(`> [SYSTEM] Installing ${brewPackageName} via Homebrew...`);
+		await runCommandStreaming("brew", ["install", brewPackageName], app.getPath("home"));
+		sendLog(`> [SYSTEM] Verifying installation of ${dependencyName}...`);
+		sendLog(`> [EXEC] ${verifyCommand}`);
+		const { stdout } = await execAsync(verifyCommand);
+		sendLog(stdout.trim());
+		sendLog(`> [SYSTEM] ${dependencyName} installed successfully!`);
+		return { success: true };
+	} catch (error) {
+		sendLog(`> [SYSTEM] [ERROR] Installation pipeline failed: ${error.message}`);
+		return {
+			success: false,
+			error: error.message
 		};
 	}
 });
-var T = null, E = null;
-r.handle("setup-workspace", async (e, n) => {
-	let r = n.replace("~", t.getPath("home"));
-	x(`> [SYSTEM] Setting up workspace at: ${r}`);
+var openclawProcess = null;
+var activeWorkspacePath = null;
+ipcMain.handle("setup-workspace", async (event, workspacePathInput) => {
+	const workspacePath = workspacePathInput.replace("~", app.getPath("home"));
+	sendLog(`> [SYSTEM] Setting up workspace at: ${workspacePath}`);
 	try {
-		x(`> [EXEC] openclaw onboard --workspace "${r}" --non-interactive --accept-risk`), await C("openclaw", [
+		sendLog(`> [EXEC] openclaw onboard --workspace "${workspacePath}" --non-interactive --accept-risk`);
+		await runCommandStreaming("openclaw", [
 			"onboard",
 			"--workspace",
-			r,
+			workspacePath,
 			"--non-interactive",
 			"--accept-risk",
 			"--skip-daemon",
@@ -148,440 +198,613 @@ r.handle("setup-workspace", async (e, n) => {
 			"--skip-skills",
 			"--skip-ui",
 			"--skip-health"
-		], t.getPath("home")), x(`> [EXEC] openclaw config set gateway.bind lan (cwd: ${r})`), await C("openclaw", [
+		], app.getPath("home"));
+		sendLog(`> [EXEC] openclaw config set gateway.bind lan (cwd: ${workspacePath})`);
+		await runCommandStreaming("openclaw", [
 			"config",
 			"set",
 			"gateway.bind",
 			"lan"
-		], r), x("> [SYSTEM] Workspace setup complete.");
+		], workspacePath);
+		sendLog("> [SYSTEM] Workspace setup complete.");
 	} catch (e) {
-		throw x(`> [SYSTEM] [ERROR] Setup failed: ${e.message}`), e;
+		sendLog(`> [SYSTEM] [ERROR] Setup failed: ${e.message}`);
+		throw e;
 	}
-	return { success: !0 };
-}), r.handle("save-api-key", async (e, n) => {
-	x("> [SYSTEM] Applying API keys via direct filesystem credentials integration...");
-	let r = async (e, n) => {
+	return { success: true };
+});
+ipcMain.handle("save-api-key", async (event, config) => {
+	sendLog("> [SYSTEM] Applying API keys via direct filesystem credentials integration...");
+	const writeCredential = async (providerId, key) => {
 		try {
-			let r = a.join(t.getPath("home"), ".openclaw", "credentials", `${e}.json`);
-			await u.mkdir(a.dirname(r), { recursive: !0 });
-			let i = {
+			const targetPath = path.join(app.getPath("home"), ".openclaw", "credentials", `${providerId}.json`);
+			await fs.mkdir(path.dirname(targetPath), { recursive: true });
+			const payload = {
 				type: "api_key",
-				provider: e,
-				key: n
+				provider: providerId,
+				key
 			};
-			await u.writeFile(r, JSON.stringify(i, null, 2), { mode: 384 }), x(`> [SYSTEM] Saved ${e} API Key successfully.`);
-		} catch (t) {
-			x(`> [SYSTEM] [ERROR] Failed saving ${e} API Key: ${t.message}`);
+			await fs.writeFile(targetPath, JSON.stringify(payload, null, 2), { mode: 384 });
+			sendLog(`> [SYSTEM] Saved ${providerId} API Key successfully.`);
+		} catch (err) {
+			sendLog(`> [SYSTEM] [ERROR] Failed saving ${providerId} API Key: ${err.message}`);
 		}
 	};
-	if (n.apiKeys && Array.isArray(n.apiKeys)) {
-		for (let e of n.apiKeys) if (e.key && e.key.trim() !== "") {
-			let n = e.key.trim();
-			if (e.provider === "OpenAI") await r("openai", n);
-			else if (e.provider === "Anthropic") await r("anthropic", n);
-			else if (e.provider === "Google Gemini") await r("google-gemini", n);
-			else if (e.provider === "Anthropic Token") try {
-				let e = a.join(t.getPath("home"), ".openclaw", "credentials", "anthropic.json");
-				await u.mkdir(a.dirname(e), { recursive: !0 });
-				let r = {
+	if (config.apiKeys && Array.isArray(config.apiKeys)) {
+		for (const item of config.apiKeys) if (item.key && item.key.trim() !== "") {
+			const key = item.key.trim();
+			if (item.provider === "OpenAI") await writeCredential("openai", key);
+			else if (item.provider === "Anthropic") await writeCredential("anthropic", key);
+			else if (item.provider === "Google Gemini") await writeCredential("google-gemini", key);
+			else if (item.provider === "Anthropic Token") try {
+				const targetPath = path.join(app.getPath("home"), ".openclaw", "credentials", "anthropic.json");
+				await fs.mkdir(path.dirname(targetPath), { recursive: true });
+				const payload = {
 					type: "token",
 					provider: "anthropic",
-					token: n
+					token: key
 				};
-				await u.writeFile(e, JSON.stringify(r, null, 2), { mode: 384 }), x("> [SYSTEM] Saved Anthropic Setup Token to credentials store natively.");
-			} catch (e) {
-				x(`> [SYSTEM] [ERROR] Failed saving Anthropic Token to credentials: ${e.message}`);
+				await fs.writeFile(targetPath, JSON.stringify(payload, null, 2), { mode: 384 });
+				sendLog("> [SYSTEM] Saved Anthropic Setup Token to credentials store natively.");
+			} catch (err) {
+				sendLog(`> [SYSTEM] [ERROR] Failed saving Anthropic Token to credentials: ${err.message}`);
 			}
 		}
-	} else n.apiKey && await r("openai", n.apiKey.trim());
+	} else if (config.apiKey) await writeCredential("openai", config.apiKey.trim());
 	try {
-		let e = a.join(t.getPath("home"), ".openclaw", "openclaw.json"), r = {};
+		const cfgPath = path.join(app.getPath("home"), ".openclaw", "openclaw.json");
+		let cfgObj = {};
 		try {
-			let t = await u.readFile(e, "utf8");
-			r = JSON.parse(t);
-		} catch {}
-		r.agents ||= {}, r.agents.defaults || (r.agents.defaults = {}), n.defaultModel && n.defaultModel !== "auto" ? r.agents.defaults.model = n.defaultModel : delete r.agents.defaults.model, await u.writeFile(e, JSON.stringify(r, null, 2)), x("> [SYSTEM] Default model preferences updated in openclaw.json.");
-	} catch (e) {
-		x(`> [SYSTEM] [ERROR] Failed to update default model preferences: ${e.message}`);
+			const rawCfg = await fs.readFile(cfgPath, "utf8");
+			cfgObj = JSON.parse(rawCfg);
+		} catch (e) {}
+		if (!cfgObj.agents) cfgObj.agents = {};
+		if (!cfgObj.agents.defaults) cfgObj.agents.defaults = {};
+		if (config.defaultModel && config.defaultModel !== "auto") cfgObj.agents.defaults.model = config.defaultModel;
+		else delete cfgObj.agents.defaults.model;
+		await fs.writeFile(cfgPath, JSON.stringify(cfgObj, null, 2));
+		sendLog(`> [SYSTEM] Default model preferences updated in openclaw.json.`);
+	} catch (err) {
+		sendLog(`> [SYSTEM] [ERROR] Failed to update default model preferences: ${err.message}`);
 	}
-	return x("> [SYSTEM] API Configuration applied successfully."), { success: !0 };
-}), r.handle("save-channels", async (e, n) => {
-	if (x("> [SYSTEM] Configuring Channels via native CLI commands..."), n.channels && Array.isArray(n.channels)) for (let e of n.channels) {
-		let r = e.provider.toLowerCase();
-		if (r.includes("lark")) {
-			let r = "feishu";
+	sendLog("> [SYSTEM] API Configuration applied successfully.");
+	return { success: true };
+});
+ipcMain.handle("save-channels", async (event, config) => {
+	sendLog("> [SYSTEM] Configuring Channels via native CLI commands...");
+	if (config.channels && Array.isArray(config.channels)) for (const item of config.channels) {
+		let provider = item.provider.toLowerCase();
+		if (provider.includes("lark")) {
+			const pName = "feishu";
 			try {
 				try {
-					x("> [EXEC] openclaw plugins install @openclaw/feishu"), await C("openclaw", [
+					sendLog(`> [EXEC] openclaw plugins install @openclaw/feishu`);
+					await runCommandStreaming("openclaw", [
 						"plugins",
 						"install",
 						"@openclaw/feishu"
-					], t.getPath("home"));
-				} catch (e) {
-					x(`> [SYSTEM] Feishu plugin already installed or failed to install: ${e.message}`);
+					], app.getPath("home"));
+				} catch (installErr) {
+					sendLog(`> [SYSTEM] Feishu plugin already installed or failed to install: ${installErr.message}`);
 				}
-				let i = n.workspacePath.replace("~", t.getPath("home"));
-				x(`> [EXEC] openclaw config set channels.${r}.enabled true`), await C("openclaw", [
+				const workspacePath = config.workspacePath.replace("~", app.getPath("home"));
+				sendLog(`> [EXEC] openclaw config set channels.${pName}.enabled true`);
+				await runCommandStreaming("openclaw", [
 					"config",
 					"set",
-					`channels.${r}.enabled`,
+					`channels.${pName}.enabled`,
 					"true"
-				], i), x("> [SYSTEM] Bypassing CLI to write Feishu credentials directly to openclaw.json...");
-				let o = a.join(t.getPath("home"), ".openclaw", "openclaw.json");
+				], workspacePath);
+				sendLog(`> [SYSTEM] Bypassing CLI to write Feishu credentials directly to openclaw.json...`);
+				const cfgPath = path.join(app.getPath("home"), ".openclaw", "openclaw.json");
 				try {
-					await u.access(o);
-					let t = await u.readFile(o, "utf8"), n = JSON.parse(t);
-					n.channels ||= {}, n.channels[r] || (n.channels[r] = { enabled: !0 }), n.channels[r].accounts || (n.channels[r].accounts = {}), n.channels[r].accounts[r] || (n.channels[r].accounts[r] = { enabled: !0 }), e.appId && (n.channels[r].accounts[r].appId = e.appId.trim()), e.appSecret && (n.channels[r].accounts[r].appSecret = e.appSecret.trim()), e.encryptKey && (n.channels[r].accounts[r].encryptKey = e.encryptKey.trim()), e.verificationToken && (n.channels[r].accounts[r].verificationToken = e.verificationToken.trim()), e.domain && (n.channels[r].accounts[r].domain = e.domain.trim()), e.dmPolicy && (n.channels[r].accounts[r].dmPolicy = e.dmPolicy.trim()), await u.writeFile(o, JSON.stringify(n, null, 2)), x("> [SYSTEM] Feishu credentials written directly to openclaw.json.");
-				} catch (e) {
-					x(`> [SYSTEM] openclaw.json not found or unreadable: ${e.message}`);
+					await fs.access(cfgPath);
+					const rawCfg = await fs.readFile(cfgPath, "utf8");
+					const cfgObj = JSON.parse(rawCfg);
+					if (!cfgObj.channels) cfgObj.channels = {};
+					if (!cfgObj.channels[pName]) cfgObj.channels[pName] = { enabled: true };
+					if (!cfgObj.channels[pName].accounts) cfgObj.channels[pName].accounts = {};
+					if (!cfgObj.channels[pName].accounts[pName]) cfgObj.channels[pName].accounts[pName] = { enabled: true };
+					if (item.appId) cfgObj.channels[pName].accounts[pName].appId = item.appId.trim();
+					if (item.appSecret) cfgObj.channels[pName].accounts[pName].appSecret = item.appSecret.trim();
+					if (item.encryptKey) cfgObj.channels[pName].accounts[pName].encryptKey = item.encryptKey.trim();
+					if (item.verificationToken) cfgObj.channels[pName].accounts[pName].verificationToken = item.verificationToken.trim();
+					if (item.domain) cfgObj.channels[pName].accounts[pName].domain = item.domain.trim();
+					if (item.dmPolicy) cfgObj.channels[pName].accounts[pName].dmPolicy = item.dmPolicy.trim();
+					await fs.writeFile(cfgPath, JSON.stringify(cfgObj, null, 2));
+					sendLog(`> [SYSTEM] Feishu credentials written directly to openclaw.json.`);
+				} catch (err) {
+					sendLog(`> [SYSTEM] openclaw.json not found or unreadable: ${err.message}`);
 				}
 			} catch (e) {
-				x(`> [SYSTEM] [ERROR] Failed to add Lark channel: ${e.message}`);
+				sendLog(`> [SYSTEM] [ERROR] Failed to add Lark channel: ${e.message}`);
 			}
 			continue;
 		}
-		if (e.key && e.key.trim() !== "") {
-			let i = r === "slack" ? "--bot-token" : "--token";
-			if (r === "webhook" || r === "whatsapp") continue;
-			let a = [
+		if (item.key && item.key.trim() !== "") {
+			let tokenArg = provider === "slack" ? "--bot-token" : "--token";
+			if (provider === "webhook" || provider === "whatsapp") continue;
+			let args = [
 				"channels",
 				"add",
 				"--channel",
-				r,
-				i,
-				e.key.trim()
+				provider,
+				tokenArg,
+				item.key.trim()
 			];
 			try {
-				let e = n.workspacePath.replace("~", t.getPath("home"));
-				x(`> [EXEC] openclaw config set channels.${r}.enabled true`), await C("openclaw", [
+				const workspacePath = config.workspacePath.replace("~", app.getPath("home"));
+				sendLog(`> [EXEC] openclaw config set channels.${provider}.enabled true`);
+				await runCommandStreaming("openclaw", [
 					"config",
 					"set",
-					`channels.${r}.enabled`,
+					`channels.${provider}.enabled`,
 					"true"
-				], e), x(`> [EXEC] openclaw ${a.join(" ")}`), await C("openclaw", a, e);
+				], workspacePath);
+				sendLog(`> [EXEC] openclaw ${args.join(" ")}`);
+				await runCommandStreaming("openclaw", args, workspacePath);
 			} catch (e) {
-				x(`> [SYSTEM] [ERROR] Failed to add channel ${r}: ${e.message}`);
+				sendLog(`> [SYSTEM] [ERROR] Failed to add channel ${provider}: ${e.message}`);
 			}
 		}
 	}
-	return x("> [SYSTEM] Channel setup sequence finished."), { success: !0 };
-}), r.handle("login-codex", async () => {
-	x("> [SYSTEM] Launching Native PKCE OpenAI Codex OAuth Login...");
+	sendLog("> [SYSTEM] Channel setup sequence finished.");
+	return { success: true };
+});
+ipcMain.handle("login-codex", async () => {
+	sendLog("> [SYSTEM] Launching Native PKCE OpenAI Codex OAuth Login...");
 	try {
-		let { loginOpenAICodex: e } = await import("./oauth-DzFh8ffL.js"), n = await e({
-			onAuth: (e) => {
-				x("> [SYSTEM] Opening Browser to OpenAI Consent Screen natively..."), i.openExternal(e.url);
+		const { loginOpenAICodex } = await import("./oauth-CcvDpqXV.js");
+		const credentials = await loginOpenAICodex({
+			onAuth: (info) => {
+				sendLog(`> [SYSTEM] Opening Browser to OpenAI Consent Screen natively...`);
+				shell.openExternal(info.url);
 			},
-			onPrompt: async (e) => {
-				throw x(`> [SYSTEM] Manual Prompt Fallback: ${e.message}`), Error("Manual fallback not supported by the frontend. Please authorize via the browser.");
+			onPrompt: async (prompt) => {
+				sendLog(`> [SYSTEM] Manual Prompt Fallback: ${prompt.message}`);
+				throw new Error("Manual fallback not supported by the frontend. Please authorize via the browser.");
 			},
 			originator: "clawchef"
-		}), r = a.join(t.getPath("home"), ".openclaw", "credentials", "openai-codex.json");
-		await u.mkdir(a.dirname(r), { recursive: !0 });
-		let o = {
-			access_token: n.access,
-			refresh_token: n.refresh,
-			expiration: n.expires,
-			email: n.accountId || "unknown",
-			access: n.access,
-			refresh: n.refresh,
-			expires: n.expires,
-			accountId: n.accountId
+		});
+		const targetPath = path.join(app.getPath("home"), ".openclaw", "credentials", "openai-codex.json");
+		await fs.mkdir(path.dirname(targetPath), { recursive: true });
+		const payload = {
+			access_token: credentials.access,
+			refresh_token: credentials.refresh,
+			expiration: credentials.expires,
+			email: credentials.accountId || "unknown",
+			access: credentials.access,
+			refresh: credentials.refresh,
+			expires: credentials.expires,
+			accountId: credentials.accountId
 		};
-		return await u.writeFile(r, JSON.stringify(o, null, 2), { mode: 384 }), x("> [SYSTEM] OpenAI Codex OAuth Login Successful through native @mariozechner library!"), { success: !0 };
-	} catch (e) {
-		return x(`> [SYSTEM] [ERROR] OpenAI Codex Login failed: ${e.message}`), {
-			success: !1,
-			error: e.message
+		await fs.writeFile(targetPath, JSON.stringify(payload, null, 2), { mode: 384 });
+		sendLog("> [SYSTEM] OpenAI Codex OAuth Login Successful through native @mariozechner library!");
+		return { success: true };
+	} catch (error) {
+		sendLog(`> [SYSTEM] [ERROR] OpenAI Codex Login failed: ${error.message}`);
+		return {
+			success: false,
+			error: error.message
 		};
 	}
 });
-async function D() {
+async function extractGeminiCliCredentials() {
 	try {
-		let e = (await p("which gemini")).stdout.trim();
-		if (e) {
-			let t = (await p(`realpath ${e}`)).stdout.trim(), n = a.join(a.dirname(t), ".."), r = a.join(n, "node_modules", "@google", "gemini-cli-core", "dist", "src", "code_assist", "oauth2.js"), i = await u.readFile(r, "utf8"), o = i.match(/OAUTH_CLIENT_ID\s*=\s*['"]([^'"]+)['"]/), s = i.match(/OAUTH_CLIENT_SECRET\s*=\s*['"]([^'"]+)['"]/);
-			if (o && s) return {
-				clientId: o[1],
-				clientSecret: s[1]
+		const geminiBin = (await execAsync("which gemini")).stdout.trim();
+		if (geminiBin) {
+			const realGeminiBin = (await execAsync(`realpath ${geminiBin}`)).stdout.trim();
+			const pkgBase = path.join(path.dirname(realGeminiBin), "..");
+			const oauth2JsPath = path.join(pkgBase, "node_modules", "@google", "gemini-cli-core", "dist", "src", "code_assist", "oauth2.js");
+			const data = await fs.readFile(oauth2JsPath, "utf8");
+			const clientIdMatch = data.match(/OAUTH_CLIENT_ID\s*=\s*['"]([^'"]+)['"]/);
+			const clientSecretMatch = data.match(/OAUTH_CLIENT_SECRET\s*=\s*['"]([^'"]+)['"]/);
+			if (clientIdMatch && clientSecretMatch) return {
+				clientId: clientIdMatch[1],
+				clientSecret: clientSecretMatch[1]
 			};
 		}
-	} catch {}
+	} catch (e) {}
 	return {
 		clientId: "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com",
 		clientSecret: "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"
 	};
 }
-r.handle("login-gemini", async () => {
-	x("> [SYSTEM] Launching Native PKCE Google Gemini OAuth Login...");
+ipcMain.handle("login-gemini", async () => {
+	sendLog("> [SYSTEM] Launching Native PKCE Google Gemini OAuth Login...");
 	try {
-		let e = await D(), n = d.randomBytes(32).toString("base64url"), r = d.createHash("sha256").update(n).digest("base64url"), o = 8085, s = `http://127.0.0.1:${o}/oauth2callback`, c = d.randomBytes(32).toString("hex"), l = [
+		const creds = await extractGeminiCliCredentials();
+		const codeVerifier = crypto.randomBytes(32).toString("base64url");
+		const codeChallenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
+		const port = 8085;
+		const redirectUri = `http://127.0.0.1:${port}/oauth2callback`;
+		const state = crypto.randomBytes(32).toString("hex");
+		const scopes = [
 			"https://www.googleapis.com/auth/cloud-platform",
 			"https://www.googleapis.com/auth/userinfo.email",
 			"https://www.googleapis.com/auth/userinfo.profile"
-		].join(" "), p = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${e.clientId}&redirect_uri=${encodeURIComponent(s)}&response_type=code&scope=${encodeURIComponent(l)}&code_challenge=${r}&code_challenge_method=S256&state=${c}&access_type=offline`, m = f.createServer(), h = new Promise((r, i) => {
-			let l = setTimeout(() => {
-				m.close(), i(/* @__PURE__ */ Error("OAuth timeout after 5 minutes"));
+		].join(" ");
+		const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${creds.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&code_challenge=${codeChallenge}&code_challenge_method=S256&state=${state}&access_type=offline`;
+		const server = http.createServer();
+		const loginPromise = new Promise((resolve, reject) => {
+			let timeout = setTimeout(() => {
+				server.close();
+				reject(/* @__PURE__ */ new Error("OAuth timeout after 5 minutes"));
 			}, 3e5);
-			m.on("request", async (d, f) => {
+			server.on("request", async (req, res) => {
 				try {
-					if (d.url.startsWith("/oauth2callback")) {
-						let l = new URL(d.url, `http://127.0.0.1:${o}`).searchParams;
-						if (l.get("error")) f.writeHead(301, { Location: "https://developers.google.com/gemini-code-assist/auth_failure_gemini" }), f.end(), i(/* @__PURE__ */ Error(`OAuth error: ${l.get("error")}`));
-						else if (l.get("state") !== c) f.writeHead(400), f.end("State mismatch"), i(/* @__PURE__ */ Error("State mismatch, possible CSRF"));
-						else if (l.get("code")) {
-							let i = l.get("code"), o = await fetch("https://oauth2.googleapis.com/token", {
+					if (req.url.startsWith("/oauth2callback")) {
+						const qs = new URL(req.url, `http://127.0.0.1:${port}`).searchParams;
+						if (qs.get("error")) {
+							res.writeHead(301, { Location: "https://developers.google.com/gemini-code-assist/auth_failure_gemini" });
+							res.end();
+							reject(/* @__PURE__ */ new Error(`OAuth error: ${qs.get("error")}`));
+						} else if (qs.get("state") !== state) {
+							res.writeHead(400);
+							res.end("State mismatch");
+							reject(/* @__PURE__ */ new Error("State mismatch, possible CSRF"));
+						} else if (qs.get("code")) {
+							const code = qs.get("code");
+							const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
 								method: "POST",
 								headers: { "Content-Type": "application/x-www-form-urlencoded" },
 								body: new URLSearchParams({
-									code: i,
-									client_id: e.clientId,
-									client_secret: e.clientSecret,
-									redirect_uri: s,
+									code,
+									client_id: creds.clientId,
+									client_secret: creds.clientSecret,
+									redirect_uri: redirectUri,
 									grant_type: "authorization_code",
-									code_verifier: n
+									code_verifier: codeVerifier
 								})
 							});
-							if (!o.ok) throw Error(await o.text());
-							let c = await o.json();
-							f.writeHead(301, { Location: "https://developers.google.com/gemini-code-assist/auth_success_gemini" }), f.end();
-							let d = a.join(t.getPath("home"), ".openclaw", "credentials", "google-gemini-cli.json");
-							await u.mkdir(a.dirname(d), { recursive: !0 }), await u.writeFile(d, JSON.stringify(c, null, 2), { mode: 384 }), r(c);
-						} else f.writeHead(400), f.end("Missing code"), i(/* @__PURE__ */ Error("Missing authorization code"));
-					} else f.writeHead(404), f.end();
+							if (!tokenRes.ok) throw new Error(await tokenRes.text());
+							const tokens = await tokenRes.json();
+							res.writeHead(301, { Location: "https://developers.google.com/gemini-code-assist/auth_success_gemini" });
+							res.end();
+							const targetPath = path.join(app.getPath("home"), ".openclaw", "credentials", "google-gemini-cli.json");
+							await fs.mkdir(path.dirname(targetPath), { recursive: true });
+							await fs.writeFile(targetPath, JSON.stringify(tokens, null, 2), { mode: 384 });
+							resolve(tokens);
+						} else {
+							res.writeHead(400);
+							res.end("Missing code");
+							reject(/* @__PURE__ */ new Error("Missing authorization code"));
+						}
+					} else {
+						res.writeHead(404);
+						res.end();
+					}
 				} catch (e) {
-					i(e);
+					reject(e);
 				} finally {
-					clearTimeout(l), m.close();
+					clearTimeout(timeout);
+					server.close();
 				}
-			}), m.on("error", i);
+			});
+			server.on("error", reject);
 		});
-		return m.listen(o, "127.0.0.1", () => {
-			x("> [SYSTEM] Opening Browser to Google Consent Screen natively..."), i.openExternal(p);
-		}), await h, x("> [SYSTEM] Google Gemini OAuth Login Successful through PKCE Server!"), { success: !0 };
-	} catch (e) {
-		return x(`> [SYSTEM] [ERROR] Google Gemini Login failed: ${e.message}`), {
-			success: !1,
-			error: e.message
+		server.listen(port, "127.0.0.1", () => {
+			sendLog(`> [SYSTEM] Opening Browser to Google Consent Screen natively...`);
+			shell.openExternal(authUrl);
+		});
+		await loginPromise;
+		sendLog("> [SYSTEM] Google Gemini OAuth Login Successful through PKCE Server!");
+		return { success: true };
+	} catch (error) {
+		sendLog(`> [SYSTEM] [ERROR] Google Gemini Login failed: ${error.message}`);
+		return {
+			success: false,
+			error: error.message
 		};
 	}
-}), r.handle("cancel-whatsapp-qr", async () => {
-	x("> [SYSTEM] Cancelling WhatsApp QR generation...");
+});
+ipcMain.handle("cancel-whatsapp-qr", async () => {
+	sendLog("> [SYSTEM] Cancelling WhatsApp QR generation...");
 	try {
-		return await p("pkill -f \"channels login --channel whatsapp\""), { success: !0 };
-	} catch {
-		return { success: !0 };
+		await execAsync(`pkill -f "channels login --channel whatsapp"`);
+		return { success: true };
+	} catch (e) {
+		return { success: true };
 	}
-}), r.handle("generate-whatsapp-qr", async (e, n) => {
-	x("> [SYSTEM] Launching native WhatsApp Web Linker..."), x("> [SYSTEM] Look at the Debug Log below to scan the Terminal ASCII QR Code.");
+});
+ipcMain.handle("generate-whatsapp-qr", async (event, workspacePathInput) => {
+	sendLog("> [SYSTEM] Launching native WhatsApp Web Linker...");
+	sendLog("> [SYSTEM] Look at the Debug Log below to scan the Terminal ASCII QR Code.");
 	try {
-		let e = n.replace("~", t.getPath("home"));
-		return x("> [EXEC] openclaw config set channels.whatsapp.enabled true"), await C("openclaw", [
+		const workspacePath = workspacePathInput.replace("~", app.getPath("home"));
+		sendLog(`> [EXEC] openclaw config set channels.whatsapp.enabled true`);
+		await runCommandStreaming("openclaw", [
 			"config",
 			"set",
 			"channels.whatsapp.enabled",
 			"true"
-		], e), x(`> [EXEC] openclaw channels login --channel whatsapp (cwd: ${e})`), await C("openclaw", [
+		], workspacePath);
+		sendLog(`> [EXEC] openclaw channels login --channel whatsapp (cwd: ${workspacePath})`);
+		await runCommandStreaming("openclaw", [
 			"channels",
 			"login",
 			"--channel",
 			"whatsapp"
-		], e), x("> [SYSTEM] WhatsApp Session Linked Successfully!"), {
-			success: !0,
+		], workspacePath);
+		sendLog("> [SYSTEM] WhatsApp Session Linked Successfully!");
+		return {
+			success: true,
 			qrDataUrl: null
 		};
-	} catch (e) {
-		return x(`> [SYSTEM] [ERROR] WhatsApp QR Generation failed: ${e.message}`), {
-			success: !1,
-			error: e.message
+	} catch (error) {
+		sendLog(`> [SYSTEM] [ERROR] WhatsApp QR Generation failed: ${error.message}`);
+		return {
+			success: false,
+			error: error.message
 		};
 	}
-}), r.handle("test-message", async (e, n, r, i, a) => {
-	x(`> [SYSTEM] Initiating Test Message dispatch to ${i} via ${r}...`);
+});
+ipcMain.handle("test-message", async (event, workspacePathInput, channel, phone, msg) => {
+	sendLog(`> [SYSTEM] Initiating Test Message dispatch to ${phone} via ${channel}...`);
 	try {
-		let e = n.replace("~", t.getPath("home")), o = i;
-		if (r === "telegram" && o.startsWith("@")) {
-			let e = o.substring(1);
-			/^\d+$/.test(e) && (o = e);
-		} else (r === "feishu" || r === "lark") && (r = "feishu", o.startsWith("@") ? o = "user:" + o.substring(1) : o.includes(":") || (o = "user:" + o));
-		let s = [
+		const repoPath = workspacePathInput.replace("~", app.getPath("home"));
+		let targetId = phone;
+		if (channel === "telegram" && targetId.startsWith("@")) {
+			const possibleNumeric = targetId.substring(1);
+			if (/^\d+$/.test(possibleNumeric)) targetId = possibleNumeric;
+		} else if (channel === "feishu" || channel === "lark") {
+			channel = "feishu";
+			if (targetId.startsWith("@")) targetId = "user:" + targetId.substring(1);
+			else if (!targetId.includes(":")) targetId = "user:" + targetId;
+		}
+		let cmdArgs = [
 			"message",
 			"send",
 			"--channel",
-			r,
+			channel,
 			"-t",
-			o,
+			targetId,
 			"-m",
-			a
+			msg
 		];
-		return r === "feishu" && (s = [
+		if (channel === "feishu") cmdArgs = [
 			"message",
 			"send",
 			"--channel",
-			r,
+			channel,
 			"--account",
 			"feishu",
 			"-t",
-			o,
+			targetId,
 			"-m",
-			a
-		]), x(`> [EXEC] openclaw ${s.join(" ")} (cwd: ${e})`), await C("openclaw", s, e), x("> [SYSTEM] Test Message dispatched successfully."), { success: !0 };
-	} catch (e) {
-		return x(`> [SYSTEM] [ERROR] Message dispatch failed: ${e.message}`), {
-			success: !1,
-			error: e.message
+			msg
+		];
+		sendLog(`> [EXEC] openclaw ${cmdArgs.join(" ")} (cwd: ${repoPath})`);
+		await runCommandStreaming("openclaw", cmdArgs, repoPath);
+		sendLog("> [SYSTEM] Test Message dispatched successfully.");
+		return { success: true };
+	} catch (error) {
+		sendLog(`> [SYSTEM] [ERROR] Message dispatch failed: ${error.message}`);
+		return {
+			success: false,
+			error: error.message
 		};
 	}
-}), r.handle("approve-pairing", async (e, n, r, i) => {
-	x(`> [SYSTEM] Initiating Pairing Approval for ${r} with code ${i}...`);
+});
+ipcMain.handle("approve-pairing", async (event, workspacePathInput, channel, code) => {
+	sendLog(`> [SYSTEM] Initiating Pairing Approval for ${channel} with code ${code}...`);
 	try {
-		let e = n.replace("~", t.getPath("home")), a = [
+		const repoPath = workspacePathInput.replace("~", app.getPath("home"));
+		let cmdArgs = [
 			"pairing",
 			"approve",
-			r,
-			i
+			channel,
+			code
 		];
-		return x(`> [EXEC] openclaw ${a.join(" ")} (cwd: ${e})`), await C("openclaw", a, e), x("> [SYSTEM] Pairing approved successfully."), { success: !0 };
-	} catch (e) {
-		return x(`> [SYSTEM] [ERROR] Pairing approval failed: ${e.message}`), {
-			success: !1,
-			error: e.message
+		sendLog(`> [EXEC] openclaw ${cmdArgs.join(" ")} (cwd: ${repoPath})`);
+		await runCommandStreaming("openclaw", cmdArgs, repoPath);
+		sendLog("> [SYSTEM] Pairing approved successfully.");
+		return { success: true };
+	} catch (error) {
+		sendLog(`> [SYSTEM] [ERROR] Pairing approval failed: ${error.message}`);
+		return {
+			success: false,
+			error: error.message
 		};
 	}
-}), r.handle("start-claw", async (n, r) => {
-	if (T) return x("> [SYSTEM] OpenClaw is already running."), { success: !0 };
-	let i = r.workspacePath.replace("~", t.getPath("home"));
-	E = i, x("> [SYSTEM] Requesting daemon installation configuration...");
-	let o = [
+});
+ipcMain.handle("start-claw", async (event, config) => {
+	if (openclawProcess) {
+		sendLog("> [SYSTEM] OpenClaw is already running.");
+		return { success: true };
+	}
+	const workspacePath = config.workspacePath.replace("~", app.getPath("home"));
+	activeWorkspacePath = workspacePath;
+	sendLog("> [SYSTEM] Requesting daemon installation configuration...");
+	const args = [
 		"onboard",
 		"--install-daemon",
 		"--non-interactive",
 		"--accept-risk",
 		"--workspace",
-		i
+		workspacePath
 	];
 	try {
-		x(`> [EXEC] openclaw ${o.join(" ")}`), await C("openclaw", o, t.getPath("home")), x("> [SYSTEM] Waiting 3 seconds for daemon to initialize its web server..."), await new Promise((e) => setTimeout(e, 3e3)), T = !0, x("> [SYSTEM] Fetching Manager Dashboard URL...");
+		sendLog(`> [EXEC] openclaw ${args.join(" ")}`);
+		await runCommandStreaming("openclaw", args, app.getPath("home"));
+		sendLog("> [SYSTEM] Waiting 3 seconds for daemon to initialize its web server...");
+		await new Promise((resolve) => setTimeout(resolve, 3e3));
+		openclawProcess = true;
+		sendLog("> [SYSTEM] Fetching Manager Dashboard URL...");
 		try {
-			let { stdout: n } = await p("/opt/homebrew/bin/node /opt/homebrew/lib/node_modules/openclaw/openclaw.mjs dashboard --no-open", { cwd: t.getPath("home") }), i = n.match(/Dashboard URL:\s*(https?:\/\/[^\s]+)/);
-			if (i && i[1]) {
-				let t = i[1];
-				x(`> [SYSTEM] Opening Manager at: ${t}`), b = new e({
+			const { stdout } = await execAsync("/opt/homebrew/bin/node /opt/homebrew/lib/node_modules/openclaw/openclaw.mjs dashboard --no-open", { cwd: app.getPath("home") });
+			const match = stdout.match(/Dashboard URL:\s*(https?:\/\/[^\s]+)/);
+			if (match && match[1]) {
+				const dashboardUrl = match[1];
+				sendLog(`> [SYSTEM] Opening Manager at: ${dashboardUrl}`);
+				managerWin = new BrowserWindow({
 					width: 1200,
 					height: 800,
 					title: "OpenClaw Manager",
 					webPreferences: {
-						nodeIntegration: !1,
-						contextIsolation: !0,
-						preload: a.join(h, "preload.mjs")
+						nodeIntegration: false,
+						contextIsolation: true,
+						preload: path.join(__dirname, "preload.mjs")
 					}
-				}), b.loadURL(t);
-				let n = !1;
-				b.webContents.on("did-finish-load", async () => {
-					!n && r.lang && (n = !0, await b.webContents.executeJavaScript(`try { localStorage.setItem('openclaw.i18n.locale', '${r.lang}'); } catch(e) {}`), b.webContents.reload());
-				}), b.on("closed", () => {
-					b = null;
 				});
-			} else x("> [SYSTEM] Could not parse Dashboard URL from stdout.");
-		} catch (e) {
-			x(`> [SYSTEM] Failed to load dashboard: ${e.message}`);
+				managerWin.loadURL(dashboardUrl);
+				let __langInjected = false;
+				managerWin.webContents.on("did-finish-load", async () => {
+					if (!__langInjected && config.lang) {
+						__langInjected = true;
+						await managerWin.webContents.executeJavaScript(`try { localStorage.setItem('openclaw.i18n.locale', '${config.lang}'); } catch(e) {}`);
+						managerWin.webContents.reload();
+					}
+				});
+				managerWin.on("closed", () => {
+					managerWin = null;
+				});
+			} else sendLog("> [SYSTEM] Could not parse Dashboard URL from stdout.");
+		} catch (dashboardErr) {
+			sendLog(`> [SYSTEM] Failed to load dashboard: ${dashboardErr.message}`);
 		}
-		return { success: !0 };
-	} catch (e) {
-		return x(`> [SYSTEM] [ERROR] Failed to start OpenClaw daemon: ${e.message}`), {
-			success: !1,
-			error: e.message
+		return { success: true };
+	} catch (error) {
+		sendLog(`> [SYSTEM] [ERROR] Failed to start OpenClaw daemon: ${error.message}`);
+		return {
+			success: false,
+			error: error.message
 		};
 	}
-}), r.handle("stop-claw", async () => {
-	if (x("> [SYSTEM] Stop button pressed. Sending kill signal to active process."), T) {
-		x("> [EXEC] openclaw daemon stop");
+});
+ipcMain.handle("stop-claw", async () => {
+	sendLog("> [SYSTEM] Stop button pressed. Sending kill signal to active process.");
+	if (openclawProcess) {
+		sendLog(`> [EXEC] openclaw daemon stop`);
 		try {
-			await C("openclaw", ["daemon", "stop"], t.getPath("home"));
+			await runCommandStreaming("openclaw", ["daemon", "stop"], app.getPath("home"));
 		} catch (e) {
-			x(`> [SYSTEM] (daemon stop returned error: ${e.message})`), x("> [EXEC] pkill -f \"node.*openclaw\""), await p("pkill -f \"node.*openclaw\"").catch(() => {});
+			sendLog(`> [SYSTEM] (daemon stop returned error: ${e.message})`);
+			sendLog(`> [EXEC] pkill -f "node.*openclaw"`);
+			await execAsync(`pkill -f "node.*openclaw"`).catch(() => {});
 		}
-		return T = null, b &&= (b.close(), null), x("> [SYSTEM] Active OpenClaw process terminated gracefully."), { success: !0 };
+		openclawProcess = null;
+		if (managerWin) {
+			managerWin.close();
+			managerWin = null;
+		}
+		sendLog("> [SYSTEM] Active OpenClaw process terminated gracefully.");
+		return { success: true };
 	}
-	return x("> [SYSTEM] No active process found to stop."), {
-		success: !1,
+	sendLog("> [SYSTEM] No active process found to stop.");
+	return {
+		success: false,
 		message: "OpenClaw is not currently running."
 	};
-}), r.handle("kill-all-tasks", async () => {
-	x("> [SYSTEM] WARNING: Kill All Tasks initiated.");
+});
+ipcMain.handle("kill-all-tasks", async () => {
+	sendLog("> [SYSTEM] WARNING: Kill All Tasks initiated.");
 	try {
-		x("> [EXEC] pkill -f \"python3.*openclaw\"");
+		sendLog(`> [EXEC] pkill -f "python3.*openclaw"`);
 		try {
-			let { stdout: e, stderr: t } = await p("pkill -f \"python3.*openclaw\"");
-			e && x(e.trim()), t && x(t.trim());
+			const { stdout, stderr } = await execAsync(`pkill -f "python3.*openclaw"`);
+			if (stdout) sendLog(stdout.trim());
+			if (stderr) sendLog(stderr.trim());
 		} catch (e) {
-			x(`> [SYSTEM] (pkill returned error, likely no tasks found tracking openclaw string: ${e.message})`);
+			sendLog(`> [SYSTEM] (pkill returned error, likely no tasks found tracking openclaw string: ${e.message})`);
 		}
-		x("> [EXEC] pkill -f \"node.*openclaw\"");
+		sendLog(`> [EXEC] pkill -f "node.*openclaw"`);
 		try {
-			await p("pkill -f \"node.*openclaw\"");
-		} catch {}
-		return T &&= (x("> [SYSTEM] Nullifying internal process tracking handle."), null), b &&= (b.close(), null), x("> [SYSTEM] Purge complete."), { success: !0 };
-	} catch (e) {
-		return x(`> [SYSTEM] [ERROR] Kill task sequence failed: ${e.message}`), {
-			success: !1,
-			error: e.message
+			await execAsync(`pkill -f "node.*openclaw"`);
+		} catch (e) {}
+		if (openclawProcess) {
+			sendLog("> [SYSTEM] Nullifying internal process tracking handle.");
+			openclawProcess = null;
+		}
+		if (managerWin) {
+			managerWin.close();
+			managerWin = null;
+		}
+		sendLog("> [SYSTEM] Purge complete.");
+		return { success: true };
+	} catch (error) {
+		sendLog(`> [SYSTEM] [ERROR] Kill task sequence failed: ${error.message}`);
+		return {
+			success: false,
+			error: error.message
 		};
 	}
-}), r.handle("uninstall-claw", async (r, i) => {
-	x("> [SYSTEM] Uninstall sequence initiated.");
+});
+ipcMain.handle("uninstall-claw", async (event, workspacePathInput) => {
+	sendLog("> [SYSTEM] Uninstall sequence initiated.");
 	try {
-		let r = (i || E || "").replace("~", t.getPath("home")), o = a.join(r, "openclaw"), s = a.join(t.getPath("home"), ".openclaw");
-		if (T) {
-			x("> [SYSTEM] Stopping active daemon before directory removal...");
+		const workspacePath = (workspacePathInput || activeWorkspacePath || "").replace("~", app.getPath("home"));
+		const repoPath = path.join(workspacePath, "openclaw");
+		const configPath = path.join(app.getPath("home"), ".openclaw");
+		const asBinary = "/opt/homebrew/bin/openclaw";
+		const intelBinary = "/usr/local/bin/openclaw";
+		if (openclawProcess) {
+			sendLog("> [SYSTEM] Stopping active daemon before directory removal...");
 			try {
-				await C("openclaw", ["daemon", "stop"], t.getPath("home"));
-			} catch {}
-			await p("pkill -f \"node.*openclaw\"").catch(() => {}), await p("pkill -f \"python3.*openclaw\"").catch(() => {}), T = null;
+				await runCommandStreaming("openclaw", ["daemon", "stop"], app.getPath("home"));
+			} catch (e) {}
+			await execAsync(`pkill -f "node.*openclaw"`).catch(() => {});
+			await execAsync(`pkill -f "python3.*openclaw"`).catch(() => {});
+			openclawProcess = null;
 		}
-		b &&= (b.close(), null);
-		let c = [
+		if (managerWin) {
+			managerWin.close();
+			managerWin = null;
+		}
+		const targets = [
 			{
-				path: o,
+				path: repoPath,
 				name: "OpenClaw Workspace Repository"
 			},
 			{
-				path: s,
+				path: configPath,
 				name: "Global ~/.openclaw Config Directory"
 			},
 			{
-				path: "/opt/homebrew/bin/openclaw",
+				path: asBinary,
 				name: "Apple Silicon Executable (/opt/homebrew/bin)"
 			},
 			{
-				path: "/usr/local/bin/openclaw",
+				path: intelBinary,
 				name: "Intel Mac Executable (/usr/local/bin)"
 			}
-		], l = !1, d = e.getFocusedWindow() || y;
-		for (let e of c) try {
-			await u.stat(e.path);
-			let { response: t } = await n.showMessageBox(d, {
+		];
+		let anyDeleted = false;
+		const currentWindow = BrowserWindow.getFocusedWindow() || win;
+		for (const target of targets) try {
+			await fs.stat(target.path);
+			const { response } = await dialog.showMessageBox(currentWindow, {
 				type: "warning",
 				title: "Approve Deletion",
-				message: `Do you want to permanently delete the following path?\n\n${e.name}\n${e.path}`,
+				message: `Do you want to permanently delete the following path?\n\n${target.name}\n${target.path}`,
 				buttons: ["Approve Deletion", "Skip"],
 				defaultId: 1,
 				cancelId: 1
 			});
-			t === 0 ? (x(`> [SYSTEM] User APPROVED deletion of ${e.path}`), x(`> [EXEC] rm -rf ${e.path}`), await u.rm(e.path, {
-				recursive: !0,
-				force: !0
-			}), x(`> [SYSTEM] ${e.name} successfully deleted.`), l = !0) : x(`> [SYSTEM] User SKIPPED deletion of ${e.path}`);
-		} catch (t) {
-			t.code === "ENOENT" ? x(`> [SYSTEM] Path not found on system: ${e.path}. Skipping.`) : x(`> [SYSTEM] [ERROR] Failed to access ${e.path}: ${t.message}`);
+			if (response === 0) {
+				sendLog(`> [SYSTEM] User APPROVED deletion of ${target.path}`);
+				sendLog(`> [EXEC] rm -rf ${target.path}`);
+				await fs.rm(target.path, {
+					recursive: true,
+					force: true
+				});
+				sendLog(`> [SYSTEM] ${target.name} successfully deleted.`);
+				anyDeleted = true;
+			} else sendLog(`> [SYSTEM] User SKIPPED deletion of ${target.path}`);
+		} catch (err) {
+			if (err.code === "ENOENT") sendLog(`> [SYSTEM] Path not found on system: ${target.path}. Skipping.`);
+			else sendLog(`> [SYSTEM] [ERROR] Failed to access ${target.path}: ${err.message}`);
 		}
-		return x(l ? "> [SYSTEM] Uninstall sequence completed successfully." : "> [SYSTEM] Uninstall sequence completed. No files were removed."), { success: !0 };
-	} catch (e) {
-		return x(`> [SYSTEM] [ERROR] Uninstall sequence encountered a critical error: ${e.message}`), {
-			success: !1,
-			error: e.message
+		if (anyDeleted) sendLog("> [SYSTEM] Uninstall sequence completed successfully.");
+		else sendLog("> [SYSTEM] Uninstall sequence completed. No files were removed.");
+		return { success: true };
+	} catch (error) {
+		sendLog(`> [SYSTEM] [ERROR] Uninstall sequence encountered a critical error: ${error.message}`);
+		return {
+			success: false,
+			error: error.message
 		};
 	}
 });
 //#endregion
-export { _ as MAIN_DIST, v as RENDERER_DIST, g as VITE_DEV_SERVER_URL };
+export { MAIN_DIST, RENDERER_DIST, VITE_DEV_SERVER_URL };
