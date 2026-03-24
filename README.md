@@ -8,7 +8,7 @@
   <b><font size="40">Your Graphical Interface for OpenClaw</font></b>
   <br>
   <br>
-  <a href="https://github.com/taijinn/ClawChef/releases/latest"><img src="https://img.shields.io/badge/Download_for_macOS_(ARM64)-orange?style=for-the-badge&logo=apple&logoColor=white" alt="Download macOS (ARM64)" height="200"></a>
+  <a href="https://github.com/taijinn/ClawChef/releases/latest"><img src="https://img.shields.io/badge/Download_for_macOS_(ARM64)-orange?style=for-the-badge&logo=apple&logoColor=white" alt="Download macOS (ARM64)" height="500"></a>
   <br>
 </div>
 ClawChef is an independent, open-source project designed to provide a fast, intuitive, and easy-to-use graphical setup interface for the [OpenClaw](https://github.com/openclaw/openclaw) AI agent orchestrator.
