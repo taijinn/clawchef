@@ -44,6 +44,7 @@ The developers of ClawChef hold **zero liability** for any API costs, messaging 
 ClawChef is currently in **Beta**. This core beta version is completely free and open-source. 
 
 If this tool saves you hours of terminal configuration, please consider supporting the development! 
+<br>
 <a href="https://buymeacoffee.com/taijinoffeh" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 145px !important;" ></a>
 
 ### 🚀 Roadmap & Future Monetization
