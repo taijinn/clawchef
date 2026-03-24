@@ -2,10 +2,10 @@
   <img src="public/logo.png" alt="ClawChef Logo" width="200"> 
   <br>
   <br>
-  <b><font size="30">ClawChef</font></b>
+  <b><font size="50">ClawChef</font></b>
   <br>
   <br>
-  <b><font size="20">Your Graphical Interface for OpenClaw</font></b>
+  <b><font size="40">Your Graphical Interface for OpenClaw</font></b>
   <br>
   <br>
   <a href="https://github.com/taijinn/ClawChef/releases/latest"><img src="https://img.shields.io/badge/Download_for_macOS_(ARM64)-orange?style=for-the-badge&logo=apple&logoColor=white" alt="Download macOS (ARM64)" height="200"></a>
