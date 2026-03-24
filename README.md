@@ -3,6 +3,7 @@
   <br>
   <b><font size="14">ClawChef</font></b>
   <br>
+  <br>
   <b><font size="7">Your Graphical Interface for OpenClaw</font></b>
   <br>
   <a href="https://github.com/taijinn/ClawChef/releases/latest"><img src="https://img.shields.io/badge/Download_for_macOS_(ARM64)-orange?style=for-the-badge&logo=apple&logoColor=white" alt="Download macOS (ARM64)" height="200"></a>
