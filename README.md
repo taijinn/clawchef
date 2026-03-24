@@ -9,6 +9,7 @@
   <br>
   <br>
   For other platforms, join the <a href="" >waitlist</a>and stay tuned!
+  <br>
 </div>
 ClawChef is an independent, open-source project designed to provide a fast, intuitive, and easy-to-use graphical setup interface for the [OpenClaw](https://github.com/openclaw/openclaw) AI agent orchestrator.
 
