@@ -8,7 +8,7 @@
   <a href="https://github.com/taijinn/ClawChef/releases/latest"><img src="https://img.shields.io/badge/Download_for_macOS_(ARM64)-orange?style=for-the-badge&logo=apple&logoColor=white" alt="Download macOS (ARM64)" height="500"></a>
   <br>
   <br>
-  🚀 For other platforms, join the <a href="https://clawchef-ai.web.app/#waitlist" >waitlist</a>and stay tuned!
+  🚀 For other platforms, join the <a href="https://clawchef-ai.web.app/#waitlist" >waitlist</a> and stay tuned!
   <br>
   <br>
 </div>
