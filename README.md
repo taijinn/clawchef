@@ -20,6 +20,12 @@ ClawChef is an independent, open-source project designed to provide a fast, intu
 https://github.com/user-attachments/assets/c43fde6c-9cbf-4c76-990a-dc4f9d1d722b
 
 
+## How to Resolve Privacy Issue on Mac (System Settings)
+
+
+https://github.com/user-attachments/assets/5f2d91e8-bfac-4212-81a6-48354b4d8062
+
+
 
 ### ⚠️ IMPORTANT: Read the Disclaimer
 Because ClawChef interfaces with external AI models and configures a highly privileged autonomous agent (OpenClaw), its use comes with inherent system and financial risks. 
