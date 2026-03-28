@@ -220,11 +220,32 @@ ipcMain.handle("save-api-key", async (event, config) => {
 			const targetPath = path.join(app.getPath("home"), ".openclaw", "credentials", `${providerId}.json`);
 			await fs.mkdir(path.dirname(targetPath), { recursive: true });
 			const payload = {
-				type: "api_key",
+				type: providerId === "anthropic" ? "token" : "api_key",
 				provider: providerId,
-				key
+				[providerId === "anthropic" ? "token" : "key"]: key
 			};
 			await fs.writeFile(targetPath, JSON.stringify(payload, null, 2), { mode: 384 });
+			sendLog(`> [SYSTEM] API Key stored natively at ${targetPath}`);
+			try {
+				const authPath = path.join(app.getPath("home"), ".openclaw", "agents", "main", "agent", "auth-profiles.json");
+				await fs.mkdir(path.dirname(authPath), { recursive: true });
+				let profilesData = {
+					version: 1,
+					profiles: {}
+				};
+				try {
+					profilesData = JSON.parse(await fs.readFile(authPath, "utf8"));
+				} catch (e) {}
+				profilesData.profiles[`${providerId}:manual`] = {
+					type: "token",
+					provider: providerId,
+					token: key
+				};
+				await fs.writeFile(authPath, JSON.stringify(profilesData, null, 2), { mode: 384 });
+				sendLog(`> [SYSTEM] Merged key into agent profile: ${authPath}`);
+			} catch (e) {
+				sendLog(`> [SYSTEM] [ERROR] Could not construct main agent auth profile: ${e.message}`);
+			}
 			sendLog(`> [SYSTEM] Saved ${providerId} API Key successfully.`);
 		} catch (err) {
 			sendLog(`> [SYSTEM] [ERROR] Failed saving ${providerId} API Key: ${err.message}`);
@@ -260,8 +281,23 @@ ipcMain.handle("save-api-key", async (event, config) => {
 		} catch (e) {}
 		if (!cfgObj.agents) cfgObj.agents = {};
 		if (!cfgObj.agents.defaults) cfgObj.agents.defaults = {};
-		if (config.defaultModel && config.defaultModel !== "auto") cfgObj.agents.defaults.model = config.defaultModel;
-		else delete cfgObj.agents.defaults.model;
+		if (config.defaultModel && config.defaultModel !== "auto") {
+			let modelStr = config.defaultModel;
+			if (modelStr.startsWith("m:")) {
+				const parts = modelStr.split(":");
+				if (parts.length >= 3) modelStr = parts[1] + "/" + parts.slice(2).join(":");
+			}
+			cfgObj.agents.defaults.model = modelStr;
+		} else {
+			let autoModel = "anthropic/claude-3-5-sonnet-latest";
+			if (config.apiKeys && Array.isArray(config.apiKeys)) {
+				const providers = config.apiKeys.filter((k) => k.key && k.key.trim() !== "" && !k.scanning).map((k) => k.provider);
+				if (providers.includes("Anthropic") || providers.includes("Anthropic Token")) autoModel = "anthropic/claude-3-5-sonnet-latest";
+				else if (providers.includes("OpenAI") || providers.includes("OpenAI Codex")) autoModel = "openai/gpt-4o";
+				else if (providers.includes("Google Gemini") || providers.includes("Google Gemini OAuth")) autoModel = "google-gemini/gemini-1.5-pro";
+			}
+			cfgObj.agents.defaults.model = autoModel;
+		}
 		await fs.writeFile(cfgPath, JSON.stringify(cfgObj, null, 2));
 		sendLog(`> [SYSTEM] Default model preferences updated in openclaw.json.`);
 	} catch (err) {
@@ -277,16 +313,6 @@ ipcMain.handle("save-channels", async (event, config) => {
 		if (provider.includes("lark")) {
 			const pName = "feishu";
 			try {
-				try {
-					sendLog(`> [EXEC] openclaw plugins install @openclaw/feishu`);
-					await runCommandStreaming("openclaw", [
-						"plugins",
-						"install",
-						"@openclaw/feishu"
-					], app.getPath("home"));
-				} catch (installErr) {
-					sendLog(`> [SYSTEM] Feishu plugin already installed or failed to install: ${installErr.message}`);
-				}
 				const workspacePath = config.workspacePath.replace("~", app.getPath("home"));
 				sendLog(`> [EXEC] openclaw config set channels.${pName}.enabled true`);
 				await runCommandStreaming("openclaw", [
@@ -354,7 +380,7 @@ ipcMain.handle("save-channels", async (event, config) => {
 ipcMain.handle("login-codex", async () => {
 	sendLog("> [SYSTEM] Launching Native PKCE OpenAI Codex OAuth Login...");
 	try {
-		const { loginOpenAICodex } = await import("./oauth-CcvDpqXV.js");
+		const { loginOpenAICodex } = await import("./oauth-DeEK2U0c.js");
 		const credentials = await loginOpenAICodex({
 			onAuth: (info) => {
 				sendLog(`> [SYSTEM] Opening Browser to OpenAI Consent Screen natively...`);
@@ -366,8 +392,6 @@ ipcMain.handle("login-codex", async () => {
 			},
 			originator: "clawchef"
 		});
-		const targetPath = path.join(app.getPath("home"), ".openclaw", "credentials", "openai-codex.json");
-		await fs.mkdir(path.dirname(targetPath), { recursive: true });
 		const payload = {
 			access_token: credentials.access,
 			refresh_token: credentials.refresh,
@@ -378,7 +402,29 @@ ipcMain.handle("login-codex", async () => {
 			expires: credentials.expires,
 			accountId: credentials.accountId
 		};
+		const targetPath = path.join(app.getPath("home"), ".openclaw", "credentials", "openai.json");
+		await fs.mkdir(path.dirname(targetPath), { recursive: true });
 		await fs.writeFile(targetPath, JSON.stringify(payload, null, 2), { mode: 384 });
+		try {
+			const authPath = path.join(app.getPath("home"), ".openclaw", "agents", "main", "agent", "auth-profiles.json");
+			await fs.mkdir(path.dirname(authPath), { recursive: true });
+			let profilesData = {
+				version: 1,
+				profiles: {}
+			};
+			try {
+				profilesData = JSON.parse(await fs.readFile(authPath, "utf8"));
+			} catch (e) {}
+			profilesData.profiles["openai:manual"] = {
+				type: "token",
+				provider: "openai",
+				token: credentials.access
+			};
+			await fs.writeFile(authPath, JSON.stringify(profilesData, null, 2), { mode: 384 });
+			sendLog(`> [SYSTEM] Merged OAuth Bearer into agent profile: ${authPath}`);
+		} catch (e) {
+			sendLog(`> [SYSTEM] [ERROR] Could not construct main agent auth: ${e.message}`);
+		}
 		sendLog("> [SYSTEM] OpenAI Codex OAuth Login Successful through native @mariozechner library!");
 		return { success: true };
 	} catch (error) {

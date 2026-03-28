@@ -60,7 +60,8 @@ openclaw security audit --deep
 openclaw security audit --fix
 
 Must read: https://docs.openclaw.ai/gateway/security`,
-    welcome_cb: `I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue?`
+    welcome_cb: `I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue?`,
+    disclaimer_text: `I have fully read and agree to the <a href="https://github.com/taijinn/ClawChef/blob/main/DISCLAIMER.md" target="_blank" style="color: var(--accent-primary); text-decoration: underline;">DISCLAIMER.md</a> regarding Autonomous Action, System Security Risks, and "As-Is" No Liability software usage.`
   },
   zh: {
     title: "ClawChef - 你的 OpenClaw 管家",
@@ -148,7 +149,8 @@ openclaw security audit --deep
 openclaw security audit --fix
 
 必读：https://docs.openclaw.ai/gateway/security`,
-    welcome_cb: `I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue? / 我理解这是默认针对个人的，共享/多用户使用需要采取锁定措施。继续？`
+    welcome_cb: `I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue? / 我理解这是默认针对个人的，共享/多用户使用需要采取锁定措施。继续？`,
+    disclaimer_text: `我已完全阅读并同意关于自主行动、系统安全风险以及“按现状”免责软件使用的 <a href="https://github.com/taijinn/ClawChef/blob/main/DISCLAIMER.md" target="_blank" style="color: var(--accent-primary); text-decoration: underline;">DISCLAIMER.md</a>。`
   },
   ja: {
     title: "ClawChef - あなたの OpenClaw 執事",
@@ -236,7 +238,8 @@ openclaw security audit --deep
 openclaw security audit --fix
 
 必読: https://docs.openclaw.ai/gateway/security`,
-    welcome_cb: `I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue? / これがデフォルトで個人向けであり、共有/マルチユーザーでの使用には制限が必要であることを理解しています。続行しますか？`
+    welcome_cb: `I understand this is personal-by-default and shared/multi-user use requires lock-down. Continue? / これがデフォルトで個人向けであり、共有/マルチユーザーでの使用には制限が必要であることを理解しています。続行しますか？`,
+    disclaimer_text: `自律行動、システムセキュリティリスク、および「現状有姿」無保証のソフトウェア使用に関する <a href="https://github.com/taijinn/ClawChef/blob/main/DISCLAIMER.md" target="_blank" style="color: var(--accent-primary); text-decoration: underline;">DISCLAIMER.md</a> を完全に理解し、同意します。`
   }
 };
 
@@ -391,7 +394,7 @@ function renderWelcome() {
         <div style="display: flex; align-items: flex-start; gap: 10px;">
           <input type="checkbox" id="accept-disclaimer-cb" style="margin-top: 4px; width: 16px; height: 16px; min-width: 16px; cursor: pointer;">
           <label for="accept-disclaimer-cb" style="font-size: 0.9rem; cursor: pointer; user-select: none; line-height: 1.4;">
-            I have fully read and agree to the <a href="https://github.com/taijinn/ClawChef/blob/main/DISCLAIMER.md" target="_blank" style="color: var(--accent-primary); text-decoration: underline;">DISCLAIMER.md</a> regarding Autonomous Action, System Security Risks, and "As-Is" No Liability software usage.
+            ${t('disclaimer_text')}
           </label>
         </div>
       </div>
@@ -596,13 +599,13 @@ function renderApiKey() {
       let optionsHTML = `<option value="auto" ${configData.defaultModel === 'auto' || !configData.defaultModel ? 'selected' : ''}>Auto-select best available model (OpenClaw Fallback Chain)</option>`;
 
       if (configuredProviders.includes('OpenAI') || configuredProviders.includes('OpenAI Codex')) {
-        optionsHTML += `<option value="m:openai:gpt-4o" ${configData.defaultModel === 'm:openai:gpt-4o' ? 'selected' : ''}>Use OpenAI (GPT-4o) as default</option>`;
+        optionsHTML += `<option value="openai/gpt-4o" ${configData.defaultModel === 'openai/gpt-4o' || configData.defaultModel === 'm:openai:gpt-4o' ? 'selected' : ''}>Use OpenAI (GPT-4o) as default</option>`;
       }
       if (configuredProviders.includes('Anthropic') || configuredProviders.includes('Anthropic Token')) {
-        optionsHTML += `<option value="m:anthropic:claude-3-5-sonnet-latest" ${configData.defaultModel === 'm:anthropic:claude-3-5-sonnet-latest' ? 'selected' : ''}>Use Anthropic (Claude 3.5 Sonnet) as default</option>`;
+        optionsHTML += `<option value="anthropic/claude-3-5-sonnet-latest" ${configData.defaultModel === 'anthropic/claude-3-5-sonnet-latest' || configData.defaultModel === 'm:anthropic:claude-3-5-sonnet-latest' ? 'selected' : ''}>Use Anthropic (Claude 3.5 Sonnet) as default</option>`;
       }
       if (configuredProviders.includes('Google Gemini') || configuredProviders.includes('Google Gemini OAuth')) {
-        optionsHTML += `<option value="m:google-gemini:gemini-1.5-pro" ${configData.defaultModel === 'm:google-gemini:gemini-1.5-pro' ? 'selected' : ''}>Use Google Gemini (Gemini 1.5 Pro) as default</option>`;
+        optionsHTML += `<option value="google-gemini/gemini-1.5-pro" ${configData.defaultModel === 'google-gemini/gemini-1.5-pro' || configData.defaultModel === 'm:google-gemini:gemini-1.5-pro' ? 'selected' : ''}>Use Google Gemini (Gemini 1.5 Pro) as default</option>`;
       }
 
       modelContainer.innerHTML = `
@@ -972,10 +975,6 @@ function renderChannelSetup() {
 
   document.getElementById('btn-next').addEventListener('click', async () => {
     const hasLark = configData.channels.some(c => c.provider === 'Lark (Feishu)');
-    if (hasLark) {
-      const confirmInstall = confirm('Lark (Feishu) channel requires downloading an additional free plugin (@openclaw/feishu) from NPM.\\n\\nDo you want to proceed and install the plugin automatically?');
-      if (!confirmInstall) return;
-    }
 
     const btnNext = document.getElementById('btn-next');
     const statusDiv = document.getElementById('channel-status');
@@ -983,7 +982,7 @@ function renderChannelSetup() {
     btnNext.disabled = true;
     btnNext.innerText = 'Connecting...';
     statusDiv.style.display = 'block';
-    statusDiv.innerText = hasLark ? 'Installing Feishu plugin & Writing configuration...' : 'Writing channel configuration...';
+    statusDiv.innerText = 'Writing channel configuration...';
 
     try {
       if (window.api && window.api.saveChannels) {
